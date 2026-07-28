@@ -15,6 +15,9 @@ unsigned long lastBatteryLog = 0;
 
 void setup()
 {
+Logger::begin();
+SleepManager::begin();
+
 
     Logger::info("=================================");
     Logger::info(FW_NAME);
@@ -22,13 +25,12 @@ void setup()
     Logger::info("Booting...");
     Logger::info("=================================");
 
-Logger::begin();
-SleepManager::begin();
+
 
 Settings::begin();
-    if (Settings::data.wifiSsid.isEmpty())
+    if (Settings::data.wifiSSID.isEmpty())
     {
-        Settings::data.wifiSsid = "Bartlingsend";
+        Settings::data.wifiSSID = "Bartlingsend";
         Settings::data.wifiPassword = "gefunden";
     }
 
