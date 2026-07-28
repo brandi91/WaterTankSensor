@@ -57,3 +57,18 @@
 
 // LED-Test beim Start aktivieren/deaktivieren
 #define DEBUG_LED_TEST
+
+// =========================
+// Deep Sleep
+// =========================
+
+// Während der Entwicklung auf true lassen.
+// Bei true wird Deep Sleep nur simuliert.
+#define DEBUG_DISABLE_DEEP_SLEEP true
+
+// Standard-Schlafzeit in Sekunden
+#define DEFAULT_SLEEP_TIME_SECONDS 60UL
+#define DEBUG_DISABLE_DEEP_SLEEP false
+
+// Taster zieht GPIO33 beim Drücken auf GND
+#define BUTTON_WAKEUP_LEVEL 0

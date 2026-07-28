@@ -2,7 +2,7 @@
 
 #include "config.h"
 #include "version.h"
-
+#include "sleep_manager.h"
 #include "logger.h"
 #include "settings.h"
 #include "led.h"
@@ -14,7 +14,6 @@ unsigned long lastBatteryLog = 0;
 
 void setup()
 {
-    Logger::begin();
 
     Logger::info("=================================");
     Logger::info(FW_NAME);
@@ -22,10 +21,14 @@ void setup()
     Logger::info("Booting...");
     Logger::info("=================================");
 
-    Settings::begin();
-    Battery::begin();
-    Led::begin();
-    Button::begin();
+Logger::begin();
+SleepManager::begin();
+
+Settings::begin();
+Battery::begin();
+Led::begin();
+Button::begin();
+Sensor::begin();
 
     Logger::info(
         "Device Name      : " +
@@ -62,24 +65,15 @@ void loop()
 
     switch (Button::getEvent())
     {
-case ButtonEvent::ShortPress:
-    Logger::info("Button: Short press");
-    Logger::info("Starting tank measurement");
+case ButtonEvent::LongPress:
+    Logger::info("Button: Long press");
+    Logger::info("Starting deep sleep test");
 
     Led::setColor(0, 0, 255);
-
-    if (Sensor::measure())
-    {
-        Led::setColor(0, 255, 0);
-        delay(500);
-    }
-    else
-    {
-        Led::setColor(255, 0, 0);
-        delay(1000);
-    }
-
+    delay(500);
     Led::off();
+
+    SleepManager::sleepNow();
     break;
     }
 
