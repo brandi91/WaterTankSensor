@@ -8,6 +8,7 @@
 #include "led.h"
 #include "battery.h"
 #include "button.h"
+#include "sensor.h"
 
 unsigned long lastBatteryLog = 0;
 
@@ -57,33 +58,32 @@ void loop()
 {
     Button::loop();
     Battery::loop();
+    Sensor::loop();
 
     switch (Button::getEvent())
     {
-        case ButtonEvent::ShortPress:
-            Logger::info("Button: Short press");
+case ButtonEvent::ShortPress:
+    Logger::info("Button: Short press");
+    Logger::info("Starting tank measurement");
 
-            // Grün als Bestätigung
-            Led::setColor(0, 255, 0);
-            delay(300);
-            Led::off();
+    Led::setColor(0, 0, 255);
 
-            break;
-
-        case ButtonEvent::LongPress:
-            Logger::info("Button: Long press");
-
-            // Blau als Bestätigung
-            Led::setColor(0, 0, 255);
-            delay(1000);
-            Led::off();
-
-            break;
-
-        case ButtonEvent::None:
-        default:
-            break;
+    if (Sensor::measure())
+    {
+        Led::setColor(0, 255, 0);
+        delay(500);
     }
+    else
+    {
+        Led::setColor(255, 0, 0);
+        delay(1000);
+    }
+
+    Led::off();
+    break;
+    }
+
+    
 
     // Batterie alle 5 Sekunden ausgeben
     if (millis() - lastBatteryLog >= 5000)

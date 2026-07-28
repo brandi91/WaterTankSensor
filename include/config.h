@@ -5,7 +5,7 @@
 // --------------------------------------------------
 
 #define FW_NAME        "WaterTankSensor"
-#define FW_VERSION     "0.1.0"
+#define FW_VERSION "0.6.0"
 
 // --------------------------------------------------
 // GPIO
@@ -21,8 +21,8 @@
 #define PIN_RGB_BLUE   27
 
 #define PIN_BUTTON 33
-#define BUTTON_DEBOUNCE_MS 50
-#define BUTTON_LONG_PRESS_MS 3000
+#define BUTTON_DEBOUNCE_MS 50UL
+#define BUTTON_LONG_PRESS_MS 3000UL
 
 #define PIN_BATTERY    34
 #define RGB_COMMON_CATHODE true
