@@ -19,6 +19,10 @@
 #define PIN_RGB_RED    25
 #define PIN_RGB_GREEN  26
 #define PIN_RGB_BLUE   27
+// true = gemeinsame Kathode (Common Cathode)
+// false = gemeinsame Anode (Common Anode)
+#define RGB_COMMON_CATHODE true
+
 
 #define PIN_BUTTON     0
 
