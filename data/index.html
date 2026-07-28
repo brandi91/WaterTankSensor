@@ -1,12 +1,221 @@
 <!DOCTYPE html>
 <html lang="de">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WaterTankSensor</title>
-  </head>
-  <body>
-    <h1>WaterTankSensor</h1>
-    <p>Web-UI placeholder</p>
-  </body>
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1">
+
+    <meta
+        http-equiv="Cache-Control"
+        content="no-cache, no-store, must-revalidate">
+
+    <title>Water Tank Sensor</title>
+
+    <link rel="stylesheet" href="/style.css">
+</head>
+
+<body>
+<div class="container">
+
+    <header class="header">
+        <h1>Water Tank Sensor</h1>
+        <p>Gerätekonfiguration</p>
+    </header>
+
+    <section class="card">
+        <h2>Status</h2>
+
+        <div class="status">
+            Gerätename: {{DEVICE_NAME}}<br>
+            Firmware: {{FW_VERSION}}<br>
+            IP-Adresse: {{IP_ADDRESS}}<br>
+            WLAN-Signal: {{WIFI_RSSI}} dBm<br>
+            Betriebsmodus: {{NETWORK_MODE}}
+        </div>
+    </section>
+
+    <form method="POST" action="/save">
+
+        <section class="card">
+            <h2>Gerät</h2>
+
+            <label for="deviceName">
+                Gerätename
+            </label>
+
+            <input
+                id="deviceName"
+                name="deviceName"
+                type="text"
+                value="{{DEVICE_NAME}}"
+                required>
+        </section>
+
+        <section class="card">
+            <h2>WLAN</h2>
+
+            <label for="wifiSSID">
+                WLAN-Name
+            </label>
+
+            <input
+                id="wifiSSID"
+                name="wifiSSID"
+                type="text"
+                value="{{WIFI_SSID}}"
+                required>
+
+            <label for="wifiPassword">
+                WLAN-Passwort
+            </label>
+
+            <input
+                id="wifiPassword"
+                name="wifiPassword"
+                type="password"
+                placeholder="Unverändert lassen">
+
+            <small>
+                Leer lassen, um das bereits gespeicherte
+                WLAN-Passwort beizubehalten.
+            </small>
+
+            <div class="warning">
+                Änderungen am WLAN-Namen oder WLAN-Passwort
+                werden erst nach einem Neustart aktiv.
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>MQTT</h2>
+
+            <label class="checkbox-row">
+                <input
+                    type="checkbox"
+                    name="mqttEnabled"
+                    value="1"
+                    {{MQTT_CHECKED}}>
+
+                MQTT aktivieren
+            </label>
+
+            <label for="mqttServer">
+                MQTT-Broker
+            </label>
+
+            <input
+                id="mqttServer"
+                name="mqttServer"
+                type="text"
+                placeholder="192.168.1.10"
+                value="{{MQTT_SERVER}}">
+
+            <label for="mqttPort">
+                MQTT-Port
+            </label>
+
+            <input
+                id="mqttPort"
+                name="mqttPort"
+                type="number"
+                min="1"
+                max="65535"
+                value="{{MQTT_PORT}}">
+
+            <label for="mqttUser">
+                MQTT-Benutzername
+            </label>
+
+            <input
+                id="mqttUser"
+                name="mqttUser"
+                type="text"
+                value="{{MQTT_USER}}">
+
+            <label for="mqttPassword">
+                MQTT-Passwort
+            </label>
+
+            <input
+                id="mqttPassword"
+                name="mqttPassword"
+                type="password"
+                placeholder="Unverändert lassen">
+
+            <small>
+                Leer lassen, um das bereits gespeicherte
+                MQTT-Passwort beizubehalten.
+            </small>
+
+            <div class="warning">
+                MQTT-Einstellungen werden nach einem Neustart
+                vollständig übernommen.
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Tank</h2>
+
+            <label for="tankHeight">
+                Tankhöhe in cm
+            </label>
+
+            <input
+                id="tankHeight"
+                name="tankHeight"
+                type="number"
+                min="1"
+                step="0.1"
+                value="{{TANK_HEIGHT}}"
+                required>
+
+            <label for="measureInterval">
+                Messintervall in Sekunden
+            </label>
+
+            <input
+                id="measureInterval"
+                name="measureInterval"
+                type="number"
+                min="1"
+                value="{{MEASURE_INTERVAL}}"
+                required>
+        </section>
+
+        <button type="submit">
+            Einstellungen speichern
+        </button>
+
+    </form>
+
+    <section class="card" style="margin-top: 18px;">
+        <h2>System</h2>
+
+        <p>
+            Starte den ESP32 neu, um geänderte WLAN- und
+            MQTT-Einstellungen zu übernehmen.
+        </p>
+
+        <form
+            method="POST"
+            action="/restart"
+            onsubmit="return confirm('ESP32 wirklich neu starten?');">
+
+            <button
+                type="submit"
+                class="restart-button">
+
+                ESP32 neu starten
+            </button>
+        </form>
+    </section>
+
+    <footer class="footer">
+        Water Tank Sensor · Firmware {{FW_VERSION}}
+    </footer>
+
+</div>
+</body>
 </html>

@@ -5,7 +5,7 @@
 // --------------------------------------------------
 
 #define FW_NAME        "WaterTankSensor"
-#define FW_VERSION "0.9.0"
+#define FW_VERSION "0.9.1"
 
 // --------------------------------------------------
 // GPIO
@@ -79,3 +79,11 @@
 #define CONFIG_AP_PASSWORD "watertank"
 
 #define WEB_SERVER_PORT 80
+
+// =========================
+// MQTT
+// =========================
+
+#define MQTT_ENABLED false
+#define MQTT_RECONNECT_INTERVAL_MS 10000UL
+#define MQTT_PUBLISH_INTERVAL_MS 30000UL

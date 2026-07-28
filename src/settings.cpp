@@ -33,6 +33,9 @@ void Settings::load()
     data.mqttPassword =
         preferences.getString("mpass", "");
 
+    data.mqttEnabled =
+    preferences.getBool("mqttEnabled", false);
+
     data.deviceName =
         preferences.getString(
             "device",
@@ -88,6 +91,11 @@ void Settings::save()
         "mpass",
         data.mqttPassword
     );
+
+    preferences.putBool(
+    "mqttEnabled",
+    data.mqttEnabled
+);
 
     preferences.putString(
         "device",

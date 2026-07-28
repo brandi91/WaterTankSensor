@@ -11,6 +11,10 @@
 #include "sensor.h"
 #include "wifi_manager.h"
 #include "web_server_manager.h"
+#if MQTT_ENABLED
+#include "mqtt_manager.h"
+#endif
+
 
 unsigned long lastBatteryLog = 0;
 
@@ -35,8 +39,13 @@ Settings::begin();
         Settings::data.wifiPassword = "gefunden";
     }
 
-
-
+if (Settings::data.mqttServer.isEmpty())
+{
+    Settings::data.mqttServer = "192.168.178.10";
+    Settings::data.mqttPort = 1883;
+    Settings::data.mqttUser = "mqtt-user";
+    Settings::data.mqttPassword = "mqtt-password";
+}
 
 WifiManager::begin();
 WifiManager::connect();
@@ -45,6 +54,10 @@ Battery::begin();
 Led::begin();
 Button::begin();
 Sensor::begin();
+
+#if MQTT_ENABLED
+MqttManager::begin();
+#endif 
 
     Logger::info(
         "Device Name      : " +
@@ -83,7 +96,9 @@ void loop()
     Sensor::loop();
     WifiManager::loop();
     WebServerManager::loop();
-
+    #if MQTT_ENABLED
+MqttManager::loop();
+#endif
     static bool normalWebserverStarted = false;
 
     if (
@@ -107,6 +122,9 @@ void loop()
             if (Sensor::measure())
             {
                 Led::setColor(0, 255, 0);
+                #if MQTT_ENABLED
+                MqttManager::publishMeasurement();
+                #endif
                 delay(500);
             }
             else

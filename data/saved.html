@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1">
+
+    <meta
+        http-equiv="refresh"
+        content="15; url=/">
+
+    <title>Konfiguration gespeichert</title>
+
+    <link rel="stylesheet" href="/style.css">
+</head>
+
+<body>
+<div class="container">
+
+    <section class="card">
+        <h1>Konfiguration gespeichert</h1>
+
+        <div class="success">
+            Die Einstellungen wurden dauerhaft gespeichert.
+        </div>
+
+        <div class="warning">
+            Änderungen am WLAN oder an MQTT werden erst nach
+            einem Neustart vollständig aktiv.
+        </div>
+
+        <p>
+            Du wirst in 15 Sekunden automatisch zur Hauptseite
+            zurückgeleitet.
+        </p>
+
+        <div class="countdown">
+            <span id="seconds">15</span> Sekunden
+        </div>
+
+        <div class="actions" style="margin-top: 22px;">
+            <a href="/" class="secondary-button">
+                Jetzt zur Hauptseite
+            </a>
+        </div>
+    </section>
+
+</div>
+
+<script>
+    let seconds = 15;
+    const output = document.getElementById("seconds");
+
+    const timer = setInterval(() => {
+        seconds -= 1;
+
+        if (seconds >= 0) {
+            output.textContent = seconds;
+        }
+
+        if (seconds <= 0) {
+            clearInterval(timer);
+        }
+    }, 1000);
+</script>
+</body>
+</html>

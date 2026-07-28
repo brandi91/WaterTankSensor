@@ -1,4 +1,197 @@
+* {
+    box-sizing: border-box;
+}
+
 body {
-  font-family: Arial, sans-serif;
-  margin: 2rem;
+    margin: 0;
+    padding: 20px;
+    background: #f1f5f9;
+    color: #1e293b;
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    width: 100%;
+    max-width: 650px;
+    margin: 0 auto;
+}
+
+.header {
+    margin-bottom: 20px;
+}
+
+.header h1 {
+    margin: 0 0 6px;
+}
+
+.header p {
+    margin: 0;
+    color: #64748b;
+}
+
+.card {
+    margin-bottom: 18px;
+    padding: 22px;
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 3px 14px rgba(0, 0, 0, 0.08);
+}
+
+h1,
+h2 {
+    margin-top: 0;
+}
+
+h2 {
+    font-size: 20px;
+}
+
+label {
+    display: block;
+    margin-top: 16px;
+    margin-bottom: 6px;
+    font-weight: bold;
+}
+
+input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 16px;
+}
+
+input:focus {
+    border-color: #2563eb;
+    outline: none;
+}
+
+small {
+    display: block;
+    margin-top: 5px;
+    color: #64748b;
+    line-height: 1.4;
+}
+
+button {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 9px;
+    background: #2563eb;
+    color: #ffffff;
+    font-size: 17px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #1d4ed8;
+}
+
+.status {
+    padding: 12px;
+    border-radius: 8px;
+    background: #e0f2fe;
+    line-height: 1.7;
+}
+
+.warning {
+    margin-top: 16px;
+    padding: 12px;
+    border: 1px solid #fdba74;
+    border-radius: 8px;
+    background: #fff7ed;
+    color: #9a3412;
+    line-height: 1.4;
+}
+
+.success {
+    margin: 18px 0;
+    padding: 12px;
+    border: 1px solid #86efac;
+    border-radius: 8px;
+    background: #f0fdf4;
+    color: #166534;
+    line-height: 1.4;
+}
+
+.info {
+    margin-top: 18px;
+    padding: 12px;
+    border: 1px solid #93c5fd;
+    border-radius: 8px;
+    background: #eff6ff;
+    color: #1e40af;
+    line-height: 1.4;
+}
+
+.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 0;
+    cursor: pointer;
+}
+
+.checkbox-row input {
+    width: auto;
+    margin: 0;
+}
+
+.restart-button {
+    background: #dc2626;
+}
+
+.restart-button:hover {
+    background: #b91c1c;
+}
+
+.secondary-button {
+    display: block;
+    width: 100%;
+    padding: 13px;
+    border-radius: 9px;
+    background: #475569;
+    color: #ffffff;
+    font-weight: bold;
+    text-align: center;
+    text-decoration: none;
+}
+
+.secondary-button:hover {
+    background: #334155;
+}
+
+.countdown {
+    margin-top: 22px;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.footer {
+    margin-top: 24px;
+    color: #64748b;
+    font-size: 13px;
+    text-align: center;
+}
+
+a {
+    color: #2563eb;
+}
+
+.actions {
+    display: grid;
+    gap: 12px;
+}
+
+@media (max-width: 500px) {
+    body {
+        padding: 12px;
+    }
+
+    .card {
+        padding: 18px;
+    }
 }

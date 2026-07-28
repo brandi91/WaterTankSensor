@@ -1,36 +1,72 @@
 #include "web_server_manager.h"
 
 #include <WiFi.h>
+#include <LittleFS.h>
 
 #include "config.h"
 #include "logger.h"
 #include "settings.h"
+#include "wifi_manager.h"
 
 // =====================================================
 // Statische Variablen
 // =====================================================
 
-WebServer WebServerManager::server(WEB_SERVER_PORT);
+WebServer WebServerManager::server(
+    WEB_SERVER_PORT
+);
 
 bool WebServerManager::running = false;
 bool WebServerManager::configPortalActive = false;
+bool WebServerManager::filesystemReady = false;
+bool WebServerManager::routesRegistered = false;
+
+bool WebServerManager::restartPending = false;
+unsigned long WebServerManager::restartAt = 0;
 
 // =====================================================
-// Webserver starten
+// Webserver initialisieren
 // =====================================================
 
 void WebServerManager::begin()
 {
+    if (!filesystemReady)
+    {
+        /*
+         * true bedeutet:
+         * Falls LittleFS nicht gemountet werden kann,
+         * wird es automatisch formatiert.
+         */
+        filesystemReady = LittleFS.begin(true);
+
+        if (!filesystemReady)
+        {
+            Logger::error(
+                "Failed to mount LittleFS"
+            );
+
+            return;
+        }
+
+        Logger::info(
+            "LittleFS mounted successfully"
+        );
+    }
+
+    if (!routesRegistered)
+    {
+        registerRoutes();
+        routesRegistered = true;
+    }
+
     if (running)
     {
         return;
     }
 
-    registerRoutes();
     server.begin();
 
     running = true;
-    configPortalActive = false;
 
     Logger::info("Webserver started");
 
@@ -49,15 +85,40 @@ void WebServerManager::begin()
 
 void WebServerManager::beginConfigPortal()
 {
-    if (configPortalActive)
+    /*
+     * Sicherstellen, dass LittleFS und der
+     * Webserver bereits initialisiert sind.
+     */
+    begin();
+
+    if (!filesystemReady)
     {
-        Logger::warning("Configuration portal already active");
+        Logger::error(
+            "Cannot start configuration portal: "
+            "LittleFS unavailable"
+        );
+
         return;
     }
 
-    Logger::info("Starting configuration portal");
+    if (configPortalActive)
+    {
+        Logger::warning(
+            "Configuration portal already active"
+        );
 
-    // Station und Access Point gleichzeitig aktivieren
+        return;
+    }
+
+    Logger::info(
+        "Starting configuration portal"
+    );
+
+    /*
+     * Station und Access Point gleichzeitig.
+     * Dadurch bleibt die Verbindung zum normalen
+     * WLAN bestehen, während der Setup-AP läuft.
+     */
     WiFi.mode(WIFI_AP_STA);
 
     const bool started = WiFi.softAP(
@@ -74,14 +135,6 @@ void WebServerManager::beginConfigPortal()
         return;
     }
 
-    if (!running)
-    {
-        registerRoutes();
-        server.begin();
-
-        running = true;
-    }
-
     configPortalActive = true;
 
     Logger::info(
@@ -96,17 +149,38 @@ void WebServerManager::beginConfigPortal()
 }
 
 // =====================================================
-// Webserver aktualisieren
+// Webserver regelmäßig verarbeiten
 // =====================================================
 
 void WebServerManager::loop()
 {
-    if (!running)
+    if (running)
     {
-        return;
+        server.handleClient();
     }
 
-    server.handleClient();
+    /*
+     * Verzögerter Neustart:
+     * So kann der Browser die Neustartseite und
+     * das CSS noch vollständig herunterladen.
+     */
+    if (
+        restartPending &&
+        static_cast<long>(
+            millis() - restartAt
+        ) >= 0
+    )
+    {
+        restartPending = false;
+
+        Logger::warning(
+            "Restarting ESP32 now"
+        );
+
+        Serial.flush();
+
+        ESP.restart();
+    }
 }
 
 // =====================================================
@@ -115,22 +189,25 @@ void WebServerManager::loop()
 
 void WebServerManager::stop()
 {
-    if (!running)
+    if (running)
     {
-        return;
-    }
+        server.stop();
+        running = false;
 
-    server.stop();
+        Logger::info(
+            "Webserver stopped"
+        );
+    }
 
     if (configPortalActive)
     {
         WiFi.softAPdisconnect(true);
+        configPortalActive = false;
+
+        Logger::info(
+            "Configuration access point stopped"
+        );
     }
-
-    running = false;
-    configPortalActive = false;
-
-    Logger::info("Webserver stopped");
 }
 
 // =====================================================
@@ -148,7 +225,7 @@ bool WebServerManager::isConfigPortalActive()
 }
 
 // =====================================================
-// Webserver-Routen
+// Routen registrieren
 // =====================================================
 
 void WebServerManager::registerRoutes()
@@ -171,7 +248,18 @@ void WebServerManager::registerRoutes()
         handleRestart
     );
 
-    // Browser fragt häufig automatisch nach einem Favicon
+    server.on(
+        "/style.css",
+        HTTP_GET,
+        []()
+        {
+            WebServerManager::sendFile(
+                "/style.css",
+                "text/css; charset=utf-8"
+            );
+        }
+    );
+
     server.on(
         "/favicon.ico",
         HTTP_GET,
@@ -185,7 +273,10 @@ void WebServerManager::registerRoutes()
         }
     );
 
-    // Typische Captive-Portal-Anfragen
+    /*
+     * Typische Captive-Portal-Anfragen von
+     * Android, Apple und Windows.
+     */
     server.on(
         "/generate_204",
         HTTP_ANY,
@@ -193,7 +284,19 @@ void WebServerManager::registerRoutes()
     );
 
     server.on(
+        "/gen_204",
+        HTTP_ANY,
+        handleRoot
+    );
+
+    server.on(
         "/hotspot-detect.html",
+        HTTP_ANY,
+        handleRoot
+    );
+
+    server.on(
+        "/library/test/success.html",
         HTTP_ANY,
         handleRoot
     );
@@ -210,16 +313,17 @@ void WebServerManager::registerRoutes()
         handleRoot
     );
 
-    server.onNotFound(handleNotFound);
+    server.onNotFound(
+        handleNotFound
+    );
 }
 
 // =====================================================
-// Hauptseite anzeigen
+// Hauptseite
 // =====================================================
 
 void WebServerManager::handleRoot()
 {
-    // Verhindert, dass der Browser alte Werte cached
     server.sendHeader(
         "Cache-Control",
         "no-cache, no-store, must-revalidate"
@@ -235,10 +339,8 @@ void WebServerManager::handleRoot()
         "0"
     );
 
-    server.send(
-        200,
-        "text/html; charset=utf-8",
-        buildPage()
+    sendTemplate(
+        "/index.html"
     );
 }
 
@@ -248,33 +350,10 @@ void WebServerManager::handleRoot()
 
 void WebServerManager::handleSave()
 {
-    if (!server.hasArg("wifiSSID"))
-    {
-        server.send(
-            400,
-            "text/plain; charset=utf-8",
-            "WLAN-Name fehlt"
-        );
-
-        return;
-    }
-
-    // WLAN-Name
-    Settings::data.wifiSSID =
-        server.arg("wifiSSID");
-
-    // Leeres Passwort bedeutet:
-    // bestehendes Passwort nicht überschreiben
-    const String newPassword =
-        server.arg("wifiPassword");
-
-    if (!newPassword.isEmpty())
-    {
-        Settings::data.wifiPassword =
-            newPassword;
-    }
-
+    // -------------------------------------------------
     // Gerätename
+    // -------------------------------------------------
+
     if (server.hasArg("deviceName"))
     {
         const String deviceName =
@@ -287,7 +366,88 @@ void WebServerManager::handleSave()
         }
     }
 
+    // -------------------------------------------------
+    // WLAN
+    // -------------------------------------------------
+
+    if (server.hasArg("wifiSSID"))
+    {
+        Settings::data.wifiSSID =
+            server.arg("wifiSSID");
+    }
+
+    /*
+     * Leeres Passwort bedeutet:
+     * bestehendes Passwort nicht überschreiben.
+     */
+    if (server.hasArg("wifiPassword"))
+    {
+        const String newWifiPassword =
+            server.arg("wifiPassword");
+
+        if (!newWifiPassword.isEmpty())
+        {
+            Settings::data.wifiPassword =
+                newWifiPassword;
+        }
+    }
+
+    // -------------------------------------------------
+    // MQTT
+    // -------------------------------------------------
+
+    /*
+     * Eine nicht ausgewählte Checkbox wird vom
+     * Browser gar nicht übertragen.
+     */
+    Settings::data.mqttEnabled =
+        server.hasArg("mqttEnabled");
+
+    if (server.hasArg("mqttServer"))
+    {
+        Settings::data.mqttServer =
+            server.arg("mqttServer");
+    }
+
+    if (server.hasArg("mqttPort"))
+    {
+        const long mqttPort =
+            server.arg("mqttPort").toInt();
+
+        if (
+            mqttPort >= 1 &&
+            mqttPort <= 65535
+        )
+        {
+            Settings::data.mqttPort =
+                static_cast<uint16_t>(
+                    mqttPort
+                );
+        }
+    }
+
+    if (server.hasArg("mqttUser"))
+    {
+        Settings::data.mqttUser =
+            server.arg("mqttUser");
+    }
+
+    if (server.hasArg("mqttPassword"))
+    {
+        const String newMqttPassword =
+            server.arg("mqttPassword");
+
+        if (!newMqttPassword.isEmpty())
+        {
+            Settings::data.mqttPassword =
+                newMqttPassword;
+        }
+    }
+
+    // -------------------------------------------------
     // Tankhöhe
+    // -------------------------------------------------
+
     if (server.hasArg("tankHeight"))
     {
         const float tankHeight =
@@ -298,165 +458,74 @@ void WebServerManager::handleSave()
             Settings::data.tankHeight =
                 tankHeight;
         }
+        else
+        {
+            Logger::warning(
+                "Invalid tank height received"
+            );
+        }
     }
 
+    // -------------------------------------------------
     // Messintervall
+    // -------------------------------------------------
+
     if (server.hasArg("measureInterval"))
     {
-        const unsigned long interval =
-            server.arg("measureInterval").toInt();
+        const long interval =
+            server.arg(
+                "measureInterval"
+            ).toInt();
 
         if (interval > 0)
         {
             Settings::data.measureInterval =
-                interval;
+                static_cast<unsigned long>(
+                    interval
+                );
+        }
+        else
+        {
+            Logger::warning(
+                "Invalid measurement interval received"
+            );
         }
     }
 
+    // -------------------------------------------------
+    // Dauerhaft speichern
+    // -------------------------------------------------
+
     Settings::save();
 
-    Logger::info("Configuration saved");
+    Logger::info(
+        "Configuration saved"
+    );
 
     Logger::info(
-        "Saved tank height: " +
+        "Tank height: " +
         String(
-            static_cast<float>(
-                Settings::data.tankHeight
-            ),
+            Settings::data.tankHeight,
             1
-        )
+        ) +
+        " cm"
     );
 
-    const String response = R"HTML(
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1">
-
-    <meta
-        http-equiv="refresh"
-        content="15; url=/">
-
-    <title>Konfiguration gespeichert</title>
-
-    <style>
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: Arial, sans-serif;
-            background: #f1f5f9;
-            color: #1e293b;
-            margin: 0;
-            padding: 24px;
-        }
-
-        .card {
-            max-width: 520px;
-            margin: 40px auto;
-            padding: 28px;
-            background: white;
-            border-radius: 14px;
-            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.10);
-        }
-
-        h1 {
-            margin-top: 0;
-        }
-
-        .success {
-            padding: 12px;
-            margin: 18px 0;
-            border: 1px solid #86efac;
-            border-radius: 8px;
-            background: #f0fdf4;
-            color: #166534;
-        }
-
-        .warning {
-            padding: 12px;
-            margin-top: 18px;
-            border: 1px solid #fdba74;
-            border-radius: 8px;
-            background: #fff7ed;
-            color: #9a3412;
-        }
-
-        .countdown {
-            margin-top: 22px;
-            font-size: 24px;
-            font-weight: bold;
-        }
-
-        a {
-            color: #2563eb;
-        }
-    </style>
-</head>
-
-<body>
-    <div class="card">
-        <h1>Konfiguration gespeichert</h1>
-
-        <div class="success">
-            Die Einstellungen wurden dauerhaft gespeichert.
-        </div>
-
-        <div class="warning">
-            Änderungen am WLAN-Namen oder WLAN-Passwort
-            werden erst nach einem Neustart des ESP32 aktiv.
-        </div>
-
-        <p>
-            Du wirst in 15 Sekunden automatisch zur
-            Hauptseite zurückgeleitet.
-        </p>
-
-        <div class="countdown">
-            <span id="seconds">15</span> Sekunden
-        </div>
-
-        <p>
-            <a href="/">Jetzt zur Hauptseite</a>
-        </p>
-    </div>
-
-    <script>
-        let seconds = 15;
-        const output = document.getElementById("seconds");
-
-        const timer = setInterval(() => {
-            seconds--;
-
-            if (seconds >= 0) {
-                output.textContent = seconds;
-            }
-
-            if (seconds <= 0) {
-                clearInterval(timer);
-            }
-        }, 1000);
-    </script>
-</body>
-</html>
-)HTML";
-
-    server.send(
-        200,
-        "text/html; charset=utf-8",
-        response
+    Logger::info(
+        "Measurement interval: " +
+        String(
+            Settings::data.measureInterval
+        ) +
+        " seconds"
     );
 
-    // Kein automatischer Neustart
+    sendTemplate(
+        "/saved.html"
+    );
 }
 
 // =====================================================
-// Neustart über Weboberfläche
+// Neustart
 // =====================================================
 
 void WebServerManager::handleRestart()
@@ -465,81 +534,21 @@ void WebServerManager::handleRestart()
         "Restart requested from web interface"
     );
 
-    const String response = R"HTML(
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1">
-
-    <title>ESP32 Neustart</title>
-
-    <style>
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: Arial, sans-serif;
-            background: #f1f5f9;
-            color: #1e293b;
-            margin: 0;
-            padding: 24px;
-        }
-
-        .card {
-            max-width: 520px;
-            margin: 40px auto;
-            padding: 28px;
-            background: white;
-            border-radius: 14px;
-            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.10);
-        }
-
-        h1 {
-            margin-top: 0;
-        }
-
-        .info {
-            padding: 12px;
-            margin-top: 18px;
-            border: 1px solid #93c5fd;
-            border-radius: 8px;
-            background: #eff6ff;
-            color: #1e40af;
-        }
-    </style>
-</head>
-
-<body>
-    <div class="card">
-        <h1>ESP32 wird neu gestartet</h1>
-
-        <div class="info">
-            Bitte warte einige Sekunden und verbinde dich
-            anschließend erneut mit dem Gerät.
-        </div>
-    </div>
-</body>
-</html>
-)HTML";
-
-    server.send(
-        200,
-        "text/html; charset=utf-8",
-        response
+    sendTemplate(
+        "/restart.html"
     );
 
-    delay(1000);
-
-    ESP.restart();
+    /*
+     * Neustart erst nach drei Sekunden.
+     * Der Browser kann dadurch vorher noch HTML
+     * und style.css herunterladen.
+     */
+    restartPending = true;
+    restartAt = millis() + 3000UL;
 }
 
 // =====================================================
-// Unbekannte URL
+// Nicht gefundene Route
 // =====================================================
 
 void WebServerManager::handleNotFound()
@@ -549,6 +558,10 @@ void WebServerManager::handleNotFound()
         server.uri()
     );
 
+    /*
+     * Im Konfigurationsmodus alle unbekannten
+     * URLs zur Hauptseite umleiten.
+     */
     server.sendHeader(
         "Location",
         "/",
@@ -563,340 +576,314 @@ void WebServerManager::handleNotFound()
 }
 
 // =====================================================
-// HTML-Hauptseite bauen
+// Template-Datei senden
 // =====================================================
 
-String WebServerManager::buildPage()
+void WebServerManager::sendTemplate(
+    const String& path
+)
 {
-    Logger::info(
-        "Building webpage, tank height: " +
-        String(
-            static_cast<float>(
-                Settings::data.tankHeight
-            ),
-            1
+    if (!filesystemReady)
+    {
+        server.send(
+            500,
+            "text/plain; charset=utf-8",
+            "LittleFS ist nicht verfügbar."
+        );
+
+        return;
+    }
+
+    String page = loadFile(path);
+
+    if (page.isEmpty())
+    {
+        Logger::error(
+            "Template is empty or missing: " +
+            path
+        );
+
+        server.send(
+            404,
+            "text/plain; charset=utf-8",
+            "Webseite nicht gefunden: " +
+            path
+        );
+
+        return;
+    }
+
+    page = processTemplate(page);
+
+    server.sendHeader(
+        "Cache-Control",
+        "no-cache, no-store, must-revalidate"
+    );
+
+    server.send(
+        200,
+        "text/html; charset=utf-8",
+        page
+    );
+}
+
+// =====================================================
+// Statische Datei senden
+// =====================================================
+
+void WebServerManager::sendFile(
+    const String& path,
+    const String& contentType
+)
+{
+    if (!filesystemReady)
+    {
+        server.send(
+            500,
+            "text/plain; charset=utf-8",
+            "LittleFS ist nicht verfügbar."
+        );
+
+        return;
+    }
+
+    if (!LittleFS.exists(path))
+    {
+        Logger::warning(
+            "Static file not found: " +
+            path
+        );
+
+        server.send(
+            404,
+            "text/plain; charset=utf-8",
+            "Datei nicht gefunden."
+        );
+
+        return;
+    }
+
+    File file = LittleFS.open(
+        path,
+        "r"
+    );
+
+    if (!file)
+    {
+        Logger::error(
+            "Failed to open file: " +
+            path
+        );
+
+        server.send(
+            500,
+            "text/plain; charset=utf-8",
+            "Datei konnte nicht geöffnet werden."
+        );
+
+        return;
+    }
+
+    server.sendHeader(
+        "Cache-Control",
+        "no-cache"
+    );
+
+    server.streamFile(
+        file,
+        contentType
+    );
+
+    file.close();
+}
+
+// =====================================================
+// Datei aus LittleFS laden
+// =====================================================
+
+String WebServerManager::loadFile(
+    const String& path
+)
+{
+    if (!LittleFS.exists(path))
+    {
+        Logger::error(
+            "File does not exist: " +
+            path
+        );
+
+        return "";
+    }
+
+    File file = LittleFS.open(
+        path,
+        "r"
+    );
+
+    if (!file)
+    {
+        Logger::error(
+            "Failed to open file: " +
+            path
+        );
+
+        return "";
+    }
+
+    String content;
+
+    content.reserve(
+        file.size() + 32
+    );
+
+    content = file.readString();
+
+    file.close();
+
+    return content;
+}
+
+// =====================================================
+// Platzhalter ersetzen
+// =====================================================
+
+String WebServerManager::processTemplate(
+    String page
+)
+{
+    page.replace(
+        "{{DEVICE_NAME}}",
+        htmlEscape(
+            Settings::data.deviceName
         )
     );
 
-    const String deviceName =
-        htmlEscape(Settings::data.deviceName);
+    page.replace(
+        "{{FW_VERSION}}",
+        FW_VERSION
+    );
 
-    const String wifiSSID =
-        htmlEscape(Settings::data.wifiSSID);
+    page.replace(
+        "{{IP_ADDRESS}}",
+        getIpAddress()
+    );
 
-    String page;
+    page.replace(
+        "{{WIFI_RSSI}}",
+        WifiManager::isConnected()
+            ? String(
+                WifiManager::getRssi()
+              )
+            : "-"
+    );
 
-    page.reserve(8000);
+    page.replace(
+        "{{NETWORK_MODE}}",
+        getNetworkMode()
+    );
 
-    page += R"HTML(
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
+    page.replace(
+        "{{WIFI_SSID}}",
+        htmlEscape(
+            Settings::data.wifiSSID
+        )
+    );
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1">
+    page.replace(
+        "{{MQTT_CHECKED}}",
+        Settings::data.mqttEnabled
+            ? "checked"
+            : ""
+    );
 
-    <title>Water Tank Sensor</title>
+    page.replace(
+        "{{MQTT_SERVER}}",
+        htmlEscape(
+            Settings::data.mqttServer
+        )
+    );
 
-    <style>
-        * {
-            box-sizing: border-box;
-        }
+    page.replace(
+        "{{MQTT_PORT}}",
+        String(
+            Settings::data.mqttPort
+        )
+    );
 
-        body {
-            font-family: Arial, sans-serif;
-            background: #f1f5f9;
-            color: #1e293b;
-            margin: 0;
-            padding: 20px;
-        }
+    page.replace(
+        "{{MQTT_USER}}",
+        htmlEscape(
+            Settings::data.mqttUser
+        )
+    );
 
-        .container {
-            max-width: 620px;
-            margin: 0 auto;
-        }
+page.replace(
+    "{{TANK_HEIGHT}}",
+    String(Settings::data.tankHeight, 1)
+);
 
-        .header {
-            margin-bottom: 20px;
-        }
+    page.replace(
+        "{{MEASURE_INTERVAL}}",
+        String(
+            Settings::data.measureInterval
+        )
+    );
+Logger::info(
+    "Template tank height: " +
+    String(Settings::data.tankHeight, 1)
+);
 
-        .header h1 {
-            margin-bottom: 6px;
-        }
+Logger::info(
+    String("Tank placeholder remains: ") +
+    (page.indexOf("{{TANK_HEIGHT}}") >= 0 ? "yes" : "no")
+);
+    return page;
+}
 
-        .header p {
-            margin-top: 0;
-            color: #64748b;
-        }
+// =====================================================
+// Aktuelle IP-Adresse
+// =====================================================
 
-        .card {
-            background: white;
-            padding: 22px;
-            margin-bottom: 18px;
-            border-radius: 14px;
-            box-shadow: 0 3px 14px rgba(0, 0, 0, 0.08);
-        }
+String WebServerManager::getIpAddress()
+{
+    if (configPortalActive)
+    {
+        return WiFi.softAPIP().toString();
+    }
 
-        h2 {
-            margin-top: 0;
-            font-size: 20px;
-        }
+    if (WiFi.status() == WL_CONNECTED)
+    {
+        return WiFi.localIP().toString();
+    }
 
-        label {
-            display: block;
-            margin-top: 16px;
-            margin-bottom: 6px;
-            font-weight: bold;
-        }
+    return "Nicht verbunden";
+}
 
-        input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            font-size: 16px;
-        }
+// =====================================================
+// Aktueller Netzwerkmodus
+// =====================================================
 
-        small {
-            display: block;
-            margin-top: 5px;
-            color: #64748b;
-        }
-
-        button {
-            width: 100%;
-            padding: 14px;
-            border: none;
-            border-radius: 9px;
-            background: #2563eb;
-            color: white;
-            font-size: 17px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background: #1d4ed8;
-        }
-
-        .status {
-            padding: 12px;
-            border-radius: 8px;
-            background: #e0f2fe;
-            line-height: 1.7;
-        }
-
-        .warning {
-            margin-top: 16px;
-            padding: 12px;
-            border: 1px solid #fdba74;
-            border-radius: 8px;
-            background: #fff7ed;
-            color: #9a3412;
-            line-height: 1.4;
-        }
-
-        .restart-button {
-            background: #dc2626;
-        }
-
-        .restart-button:hover {
-            background: #b91c1c;
-        }
-
-        .footer {
-            margin-top: 24px;
-            color: #64748b;
-            font-size: 13px;
-            text-align: center;
-        }
-    </style>
-</head>
-
-<body>
-<div class="container">
-
-    <div class="header">
-        <h1>Water Tank Sensor</h1>
-        <p>Gerätekonfiguration</p>
-    </div>
-
-    <div class="card">
-        <h2>Status</h2>
-
-        <div class="status">
-            Firmware: )HTML";
-
-    page += FW_VERSION;
-
-    page += R"HTML(<br>
-            IP-Adresse: )HTML";
+String WebServerManager::getNetworkMode()
+{
+    if (
+        configPortalActive &&
+        WiFi.status() == WL_CONNECTED
+    )
+    {
+        return "WLAN + Konfigurations-AP";
+    }
 
     if (configPortalActive)
     {
-        page += WiFi.softAPIP().toString();
+        return "Konfigurations-AP";
     }
-    else if (WiFi.status() == WL_CONNECTED)
+
+    if (WiFi.status() == WL_CONNECTED)
     {
-        page += WiFi.localIP().toString();
-    }
-    else
-    {
-        page += "Nicht verbunden";
+        return "WLAN";
     }
 
-    page += R"HTML(
-        </div>
-    </div>
-
-    <form method="POST" action="/save">
-
-        <div class="card">
-            <h2>Gerät</h2>
-
-            <label for="deviceName">
-                Gerätename
-            </label>
-
-            <input
-                id="deviceName"
-                name="deviceName"
-                type="text"
-                value=")HTML";
-
-    page += deviceName;
-
-    page += R"HTML("
-                required>
-        </div>
-
-        <div class="card">
-            <h2>WLAN</h2>
-
-            <label for="wifiSSID">
-                WLAN-Name
-            </label>
-
-            <input
-                id="wifiSSID"
-                name="wifiSSID"
-                type="text"
-                value=")HTML";
-
-    page += wifiSSID;
-
-    page += R"HTML("
-                required>
-
-            <label for="wifiPassword">
-                WLAN-Passwort
-            </label>
-
-            <input
-                id="wifiPassword"
-                name="wifiPassword"
-                type="password"
-                placeholder="Unverändert lassen">
-
-            <small>
-                Leer lassen, um das gespeicherte Passwort
-                beizubehalten.
-            </small>
-
-            <div class="warning">
-                Änderungen am WLAN-Namen oder WLAN-Passwort
-                werden erst nach einem Neustart des ESP32 aktiv.
-            </div>
-        </div>
-
-        <div class="card">
-            <h2>Tank</h2>
-
-            <label for="tankHeight">
-                Tankhöhe in cm
-            </label>
-
-            <input
-                id="tankHeight"
-                name="tankHeight"
-                type="number"
-                min="1"
-                step="0.1"
-                value=")HTML";
-
-    page += String(
-        static_cast<float>(
-            Settings::data.tankHeight
-        ),
-        1
-    );
-
-    page += R"HTML("
-                required>
-
-            <label for="measureInterval">
-                Messintervall in Sekunden
-            </label>
-
-            <input
-                id="measureInterval"
-                name="measureInterval"
-                type="number"
-                min="1"
-                value=")HTML";
-
-    page += String(
-        Settings::data.measureInterval
-    );
-
-    page += R"HTML("
-                required>
-        </div>
-
-        <button type="submit">
-            Einstellungen speichern
-        </button>
-
-    </form>
-
-    <div class="card" style="margin-top: 18px;">
-        <h2>System</h2>
-
-        <p>
-            Starte den ESP32 neu, um geänderte
-            WLAN-Einstellungen zu übernehmen.
-        </p>
-
-        <form
-            method="POST"
-            action="/restart"
-            onsubmit="return confirm('ESP32 wirklich neu starten?');">
-
-            <button
-                type="submit"
-                class="restart-button">
-
-                ESP32 neu starten
-            </button>
-        </form>
-    </div>
-
-    <div class="footer">
-        Water Tank Sensor · Firmware )HTML";
-
-    page += FW_VERSION;
-
-    page += R"HTML(
-    </div>
-
-</div>
-</body>
-</html>
-)HTML";
-
-    return page;
+    return "Offline";
 }
 
 // =====================================================
@@ -909,11 +896,30 @@ String WebServerManager::htmlEscape(
 {
     String escaped = value;
 
-    escaped.replace("&", "&amp;");
-    escaped.replace("<", "&lt;");
-    escaped.replace(">", "&gt;");
-    escaped.replace("\"", "&quot;");
-    escaped.replace("'", "&#39;");
+    escaped.replace(
+        "&",
+        "&amp;"
+    );
+
+    escaped.replace(
+        "<",
+        "&lt;"
+    );
+
+    escaped.replace(
+        ">",
+        "&gt;"
+    );
+
+    escaped.replace(
+        "\"",
+        "&quot;"
+    );
+
+    escaped.replace(
+        "'",
+        "&#39;"
+    );
 
     return escaped;
 }
