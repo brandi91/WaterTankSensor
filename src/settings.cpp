@@ -15,38 +15,94 @@ void Settings::begin()
 
 void Settings::load()
 {
-    data.wifiSSID = preferences.getString("ssid", "");
-    data.wifiPassword = preferences.getString("pass", "");
+    data.wifiSSID =
+        preferences.getString("ssid", "");
 
-    data.mqttServer = preferences.getString("mqtt", "");
-    data.mqttPort = preferences.getUShort("port", 1883);
+    data.wifiPassword =
+        preferences.getString("pass", "");
 
-    data.mqttUser = preferences.getString("user", "");
-    data.mqttPassword = preferences.getString("mpass", "");
+    data.mqttServer =
+        preferences.getString("mqtt", "");
 
-    data.deviceName = preferences.getString("device", "WaterTankSensor");
+    data.mqttPort =
+        preferences.getUShort("port", 1883);
 
-    data.tankHeight = preferences.getUShort("tank", 100);
+    data.mqttUser =
+        preferences.getString("user", "");
 
-    data.measureInterval = preferences.getUShort("interval", 300);
+    data.mqttPassword =
+        preferences.getString("mpass", "");
+
+    data.deviceName =
+        preferences.getString(
+            "device",
+            "WaterTankSensor"
+        );
+
+    data.tankHeight =
+        preferences.getFloat(
+            "tank",
+            100.0f
+        );
+
+    if (data.tankHeight <= 0.0f)
+    {
+        data.tankHeight = 100.0f;
+    }
+
+    data.measureInterval =
+        preferences.getUShort(
+            "interval",
+            300
+        );
 }
 
 void Settings::save()
 {
-    preferences.putString("ssid", data.wifiSSID);
-    preferences.putString("pass", data.wifiPassword);
+    preferences.putString(
+        "ssid",
+        data.wifiSSID
+    );
 
-    preferences.putString("mqtt", data.mqttServer);
-    preferences.putUShort("port", data.mqttPort);
+    preferences.putString(
+        "pass",
+        data.wifiPassword
+    );
 
-    preferences.putString("user", data.mqttUser);
-    preferences.putString("mpass", data.mqttPassword);
+    preferences.putString(
+        "mqtt",
+        data.mqttServer
+    );
 
-    preferences.putString("device", data.deviceName);
+    preferences.putUShort(
+        "port",
+        data.mqttPort
+    );
 
-    preferences.putUShort("tank", data.tankHeight);
+    preferences.putString(
+        "user",
+        data.mqttUser
+    );
 
-    preferences.putUShort("interval", data.measureInterval);
+    preferences.putString(
+        "mpass",
+        data.mqttPassword
+    );
+
+    preferences.putString(
+        "device",
+        data.deviceName
+    );
+
+    preferences.putFloat(
+        "tank",
+        data.tankHeight
+    );
+
+    preferences.putUShort(
+        "interval",
+        data.measureInterval
+    );
 }
 
 void Settings::reset()

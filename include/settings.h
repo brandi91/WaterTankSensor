@@ -30,3 +30,4 @@ public:
 
     static SettingsData data;
 };
+

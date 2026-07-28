@@ -5,7 +5,7 @@
 // --------------------------------------------------
 
 #define FW_NAME        "WaterTankSensor"
-#define FW_VERSION "0.7.0"
+#define FW_VERSION "0.9.0"
 
 // --------------------------------------------------
 // GPIO
@@ -70,3 +70,12 @@
 
 // Taster zieht GPIO33 beim Drücken auf GND
 #define BUTTON_WAKEUP_LEVEL 0
+
+// =========================
+// Configuration portal
+// =========================
+
+#define CONFIG_AP_SSID "WaterTankSensor-Setup"
+#define CONFIG_AP_PASSWORD "watertank"
+
+#define WEB_SERVER_PORT 80

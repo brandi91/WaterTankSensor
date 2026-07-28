@@ -10,6 +10,7 @@
 #include "button.h"
 #include "sensor.h"
 #include "wifi_manager.h"
+#include "web_server_manager.h"
 
 unsigned long lastBatteryLog = 0;
 
@@ -39,6 +40,7 @@ Settings::begin();
 
 WifiManager::begin();
 WifiManager::connect();
+
 Battery::begin();
 Led::begin();
 Button::begin();
@@ -80,34 +82,55 @@ void loop()
     Battery::loop();
     Sensor::loop();
     WifiManager::loop();
-    switch (Button::getEvent())
+    WebServerManager::loop();
+
+    static bool normalWebserverStarted = false;
+
+    if (
+        WifiManager::isConnected() &&
+        !normalWebserverStarted &&
+        !WebServerManager::isConfigPortalActive()
+    )
     {
-case ButtonEvent::LongPress:
-    Logger::info("Button: Long press");
-    Logger::info("Starting deep sleep test");
-
-    Led::setColor(0, 0, 255);
-    delay(500);
-    Led::off();
-
-    SleepManager::sleepNow();
-    break;
+        WebServerManager::begin();
+        normalWebserverStarted = true;
     }
 
-    
-
-    // Batterie alle 5 Sekunden ausgeben
-    if (millis() - lastBatteryLog >= 5000)
+    switch (Button::getEvent())
     {
-        lastBatteryLog = millis();
+        case ButtonEvent::ShortPress:
+            Logger::info("Button: Short press");
+            Logger::info("Starting tank measurement");
 
-        Logger::info(
-            "Battery: " +
-            String(Battery::getVoltage(), 2) +
-            " V (" +
-            String(Battery::getPercentage()) +
-            "%)"
-        );
+            Led::setColor(0, 0, 255);
+
+            if (Sensor::measure())
+            {
+                Led::setColor(0, 255, 0);
+                delay(500);
+            }
+            else
+            {
+                Led::setColor(255, 0, 0);
+                delay(1000);
+            }
+
+            Led::off();
+            break;
+
+        case ButtonEvent::LongPress:
+            Logger::info("Button: Long press");
+            Logger::info("Starting configuration portal");
+
+            Led::setColor(0, 0, 255);
+
+            WebServerManager::beginConfigPortal();
+
+            break;
+
+        case ButtonEvent::None:
+        default:
+            break;
     }
 
     delay(5);
