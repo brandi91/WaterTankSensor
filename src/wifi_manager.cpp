@@ -1,5 +1,7 @@
 #include "wifi_manager.h"
+
 #include <WiFi.h>
+
 #include "config.h"
 #include "logger.h"
 #include "settings.h"
@@ -12,7 +14,6 @@ unsigned long WifiManager::lastReconnectAttempt = 0;
 void WifiManager::begin()
 {
     WiFi.mode(WIFI_STA);
-
     WiFi.setAutoReconnect(true);
 
     state = WifiState::Disconnected;
@@ -59,21 +60,22 @@ void WifiManager::loop()
 {
     const unsigned long now = millis();
 
-    if (WifiManager::isConnected())
+    if (WiFi.isConnected())
     {
         if (state != WifiState::Connected)
         {
             state = WifiState::Connected;
 
             Logger::info("Wi-Fi connected");
+
             Logger::info(
                 "IP address: " +
-                WifiManager::getIpAddress()
+                WiFi.localIP().toString()
             );
 
             Logger::info(
                 "Signal strength: " +
-                String(WifiManager::getRssi()) +
+                String(WiFi.RSSI()) +
                 " dBm"
             );
         }
@@ -83,16 +85,17 @@ void WifiManager::loop()
 
     if (state == WifiState::Connecting)
     {
-        if (now - connectionStartedAt >= WIFI_CONNECT_TIMEOUT_MS)
+        if (
+            now - connectionStartedAt >=
+            WIFI_CONNECT_TIMEOUT_MS
+        )
         {
             state = WifiState::ConnectionFailed;
             lastReconnectAttempt = now;
 
-            Logger::warning(
-                "Wi-Fi connection timed out"
-            );
+            Logger::warning("Wi-Fi connection timed out");
 
-            WifiManager::disconnect();
+            WiFi.disconnect();
         }
 
         return;
@@ -116,7 +119,7 @@ void WifiManager::loop()
 
 void WifiManager::disconnect()
 {
-    WifiManager::disconnect(true, false);
+    WiFi.disconnect(true, false);
 
     state = WifiState::Disabled;
 
@@ -125,7 +128,7 @@ void WifiManager::disconnect()
 
 bool WifiManager::isConnected()
 {
-    return WifiManager::isConnected();
+    return WiFi.isConnected();
 }
 
 WifiState WifiManager::getState()
@@ -135,30 +138,30 @@ WifiState WifiManager::getState()
 
 String WifiManager::getIpAddress()
 {
-    if (!WifiManager::isConnected())
+    if (!WiFi.isConnected())
     {
         return "";
     }
 
-    return WifiManager::localIP().toString();
+    return WiFi.localIP().toString();
 }
 
 String WifiManager::getSsid()
 {
-    if (!WifiManager::isConnected())
+    if (!WiFi.isConnected())
     {
         return "";
     }
 
-    return WifiManager::SSID();
+    return WiFi.SSID();
 }
 
 int32_t WifiManager::getRssi()
 {
-    if (!WifiManager::isConnected())
+    if (!WiFi.isConnected())
     {
         return 0;
     }
 
-    return WifiManager::RSSI();
+    return WiFi.RSSI();
 }

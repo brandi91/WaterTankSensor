@@ -5,7 +5,7 @@
 // --------------------------------------------------
 
 #define FW_NAME        "WaterTankSensor"
-#define FW_VERSION "0.6.0"
+#define FW_VERSION "0.7.0"
 
 // --------------------------------------------------
 // GPIO
@@ -52,6 +52,8 @@
 // --------------------------------------------------
 
 #define DEFAULT_HOSTNAME "WaterTankSensor"
+#define WIFI_CONNECT_TIMEOUT_MS 15000UL
+#define WIFI_RECONNECT_INTERVAL_MS 10000UL
 
 // --------------------------------------------------
 
@@ -62,13 +64,9 @@
 // Deep Sleep
 // =========================
 
-// Während der Entwicklung auf true lassen.
-// Bei true wird Deep Sleep nur simuliert.
-#define DEBUG_DISABLE_DEEP_SLEEP true
-
 // Standard-Schlafzeit in Sekunden
 #define DEFAULT_SLEEP_TIME_SECONDS 60UL
-#define DEBUG_DISABLE_DEEP_SLEEP false
+#define DEBUG_DISABLE_DEEP_SLEEP true
 
 // Taster zieht GPIO33 beim Drücken auf GND
 #define BUTTON_WAKEUP_LEVEL 0
