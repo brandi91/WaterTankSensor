@@ -186,6 +186,47 @@ a {
     gap: 12px;
 }
 
+/* =========================
+   Dashboard
+   ========================= */
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.metric-card {
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 3px 14px rgba(0, 0, 0, 0.08);
+}
+
+.metric-label {
+    margin-bottom: 8px;
+    color: #64748b;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.metric-value {
+    color: #0f172a;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.metric-detail {
+    margin-top: 5px;
+    color: #64748b;
+    font-size: 14px;
+}
+
+/* =========================
+   Responsive
+   ========================= */
+
 @media (max-width: 500px) {
     body {
         padding: 12px;
@@ -193,5 +234,13 @@ a {
 
     .card {
         padding: 18px;
+    }
+
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .metric-value {
+        font-size: 24px;
     }
 }

@@ -25,10 +25,15 @@ private:
     static bool restartPending;
     static unsigned long restartAt;
 
+    static bool sleepPending;
+    static unsigned long sleepAt;
+
     static void registerRoutes();
 
     static void handleRoot();
     static void handleSave();
+    static void handleMeasure();
+    static void handleSleep();
     static void handleRestart();
     static void handleNotFound();
 

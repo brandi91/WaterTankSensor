@@ -3,14 +3,14 @@
 #include <WiFi.h>
 #include <LittleFS.h>
 
+#include "battery.h"
 #include "config.h"
+#include "led.h"
 #include "logger.h"
+#include "sensor.h"
 #include "settings.h"
+#include "sleep_manager.h"
 #include "wifi_manager.h"
-
-// =====================================================
-// Statische Variablen
-// =====================================================
 
 WebServer WebServerManager::server(
     WEB_SERVER_PORT
@@ -24,19 +24,13 @@ bool WebServerManager::routesRegistered = false;
 bool WebServerManager::restartPending = false;
 unsigned long WebServerManager::restartAt = 0;
 
-// =====================================================
-// Webserver initialisieren
-// =====================================================
+bool WebServerManager::sleepPending = false;
+unsigned long WebServerManager::sleepAt = 0;
 
 void WebServerManager::begin()
 {
     if (!filesystemReady)
     {
-        /*
-         * true bedeutet:
-         * Falls LittleFS nicht gemountet werden kann,
-         * wird es automatisch formatiert.
-         */
         filesystemReady = LittleFS.begin(true);
 
         if (!filesystemReady)
@@ -65,7 +59,6 @@ void WebServerManager::begin()
     }
 
     server.begin();
-
     running = true;
 
     Logger::info("Webserver started");
@@ -79,16 +72,8 @@ void WebServerManager::begin()
     }
 }
 
-// =====================================================
-// Konfigurations-Access-Point starten
-// =====================================================
-
 void WebServerManager::beginConfigPortal()
 {
-    /*
-     * Sicherstellen, dass LittleFS und der
-     * Webserver bereits initialisiert sind.
-     */
     begin();
 
     if (!filesystemReady)
@@ -114,11 +99,6 @@ void WebServerManager::beginConfigPortal()
         "Starting configuration portal"
     );
 
-    /*
-     * Station und Access Point gleichzeitig.
-     * Dadurch bleibt die Verbindung zum normalen
-     * WLAN bestehen, während der Setup-AP läuft.
-     */
     WiFi.mode(WIFI_AP_STA);
 
     const bool started = WiFi.softAP(
@@ -148,10 +128,6 @@ void WebServerManager::beginConfigPortal()
     );
 }
 
-// =====================================================
-// Webserver regelmäßig verarbeiten
-// =====================================================
-
 void WebServerManager::loop()
 {
     if (running)
@@ -159,16 +135,11 @@ void WebServerManager::loop()
         server.handleClient();
     }
 
-    /*
-     * Verzögerter Neustart:
-     * So kann der Browser die Neustartseite und
-     * das CSS noch vollständig herunterladen.
-     */
+    const unsigned long now = millis();
+
     if (
         restartPending &&
-        static_cast<long>(
-            millis() - restartAt
-        ) >= 0
+        static_cast<long>(now - restartAt) >= 0
     )
     {
         restartPending = false;
@@ -178,14 +149,28 @@ void WebServerManager::loop()
         );
 
         Serial.flush();
-
         ESP.restart();
     }
-}
 
-// =====================================================
-// Webserver stoppen
-// =====================================================
+    if (
+        sleepPending &&
+        static_cast<long>(now - sleepAt) >= 0
+    )
+    {
+        sleepPending = false;
+
+        Logger::info(
+            "Entering deep sleep from web interface"
+        );
+
+        WebServerManager::stop();
+        Led::off();
+
+        Serial.flush();
+
+        SleepManager::sleepNow();
+    }
+}
 
 void WebServerManager::stop()
 {
@@ -210,10 +195,6 @@ void WebServerManager::stop()
     }
 }
 
-// =====================================================
-// Status
-// =====================================================
-
 bool WebServerManager::isRunning()
 {
     return running;
@@ -223,10 +204,6 @@ bool WebServerManager::isConfigPortalActive()
 {
     return configPortalActive;
 }
-
-// =====================================================
-// Routen registrieren
-// =====================================================
 
 void WebServerManager::registerRoutes()
 {
@@ -240,6 +217,18 @@ void WebServerManager::registerRoutes()
         "/save",
         HTTP_POST,
         handleSave
+    );
+
+    server.on(
+        "/measure",
+        HTTP_POST,
+        handleMeasure
+    );
+
+    server.on(
+        "/sleep",
+        HTTP_POST,
+        handleSleep
     );
 
     server.on(
@@ -273,10 +262,6 @@ void WebServerManager::registerRoutes()
         }
     );
 
-    /*
-     * Typische Captive-Portal-Anfragen von
-     * Android, Apple und Windows.
-     */
     server.on(
         "/generate_204",
         HTTP_ANY,
@@ -318,10 +303,6 @@ void WebServerManager::registerRoutes()
     );
 }
 
-// =====================================================
-// Hauptseite
-// =====================================================
-
 void WebServerManager::handleRoot()
 {
     server.sendHeader(
@@ -344,16 +325,8 @@ void WebServerManager::handleRoot()
     );
 }
 
-// =====================================================
-// Einstellungen speichern
-// =====================================================
-
 void WebServerManager::handleSave()
 {
-    // -------------------------------------------------
-    // Gerätename
-    // -------------------------------------------------
-
     if (server.hasArg("deviceName"))
     {
         const String deviceName =
@@ -366,20 +339,12 @@ void WebServerManager::handleSave()
         }
     }
 
-    // -------------------------------------------------
-    // WLAN
-    // -------------------------------------------------
-
     if (server.hasArg("wifiSSID"))
     {
         Settings::data.wifiSSID =
             server.arg("wifiSSID");
     }
 
-    /*
-     * Leeres Passwort bedeutet:
-     * bestehendes Passwort nicht überschreiben.
-     */
     if (server.hasArg("wifiPassword"))
     {
         const String newWifiPassword =
@@ -392,14 +357,6 @@ void WebServerManager::handleSave()
         }
     }
 
-    // -------------------------------------------------
-    // MQTT
-    // -------------------------------------------------
-
-    /*
-     * Eine nicht ausgewählte Checkbox wird vom
-     * Browser gar nicht übertragen.
-     */
     Settings::data.mqttEnabled =
         server.hasArg("mqttEnabled");
 
@@ -444,10 +401,6 @@ void WebServerManager::handleSave()
         }
     }
 
-    // -------------------------------------------------
-    // Tankhöhe
-    // -------------------------------------------------
-
     if (server.hasArg("tankHeight"))
     {
         const float tankHeight =
@@ -458,17 +411,7 @@ void WebServerManager::handleSave()
             Settings::data.tankHeight =
                 tankHeight;
         }
-        else
-        {
-            Logger::warning(
-                "Invalid tank height received"
-            );
-        }
     }
-
-    // -------------------------------------------------
-    // Messintervall
-    // -------------------------------------------------
 
     if (server.hasArg("measureInterval"))
     {
@@ -484,17 +427,7 @@ void WebServerManager::handleSave()
                     interval
                 );
         }
-        else
-        {
-            Logger::warning(
-                "Invalid measurement interval received"
-            );
-        }
     }
-
-    // -------------------------------------------------
-    // Dauerhaft speichern
-    // -------------------------------------------------
 
     Settings::save();
 
@@ -502,31 +435,85 @@ void WebServerManager::handleSave()
         "Configuration saved"
     );
 
-    Logger::info(
-        "Tank height: " +
-        String(
-            Settings::data.tankHeight,
-            1
-        ) +
-        " cm"
-    );
-
-    Logger::info(
-        "Measurement interval: " +
-        String(
-            Settings::data.measureInterval
-        ) +
-        " seconds"
-    );
-
     sendTemplate(
         "/saved.html"
     );
 }
 
-// =====================================================
-// Neustart
-// =====================================================
+void WebServerManager::handleMeasure()
+{
+    Logger::info(
+        "Measurement requested from web interface"
+    );
+
+    Led::setColor(
+        0,
+        0,
+        255
+    );
+
+    const bool measurementSuccessful =
+        Sensor::measure();
+
+    if (measurementSuccessful)
+    {
+        Led::setColor(
+            0,
+            255,
+            0
+        );
+
+        Logger::info(
+            "Web measurement successful"
+        );
+    }
+    else
+    {
+        Led::setColor(
+            255,
+            0,
+            0
+        );
+
+        Logger::warning(
+            "Web measurement failed"
+        );
+    }
+
+    delay(
+        measurementSuccessful
+            ? 300
+            : 800
+    );
+
+    Led::off();
+
+    server.sendHeader(
+        "Location",
+        "/",
+        true
+    );
+
+    server.send(
+        303,
+        "text/plain",
+        ""
+    );
+}
+
+void WebServerManager::handleSleep()
+{
+    Logger::info(
+        "Deep sleep requested from web interface"
+    );
+
+    sendTemplate(
+        "/sleep.html"
+    );
+
+    sleepPending = true;
+    sleepAt = millis() + 2500UL;
+}
 
 void WebServerManager::handleRestart()
 {
@@ -538,18 +525,9 @@ void WebServerManager::handleRestart()
         "/restart.html"
     );
 
-    /*
-     * Neustart erst nach drei Sekunden.
-     * Der Browser kann dadurch vorher noch HTML
-     * und style.css herunterladen.
-     */
     restartPending = true;
     restartAt = millis() + 3000UL;
 }
-
-// =====================================================
-// Nicht gefundene Route
-// =====================================================
 
 void WebServerManager::handleNotFound()
 {
@@ -558,10 +536,6 @@ void WebServerManager::handleNotFound()
         server.uri()
     );
 
-    /*
-     * Im Konfigurationsmodus alle unbekannten
-     * URLs zur Hauptseite umleiten.
-     */
     server.sendHeader(
         "Location",
         "/",
@@ -574,10 +548,6 @@ void WebServerManager::handleNotFound()
         ""
     );
 }
-
-// =====================================================
-// Template-Datei senden
-// =====================================================
 
 void WebServerManager::sendTemplate(
     const String& path
@@ -626,10 +596,6 @@ void WebServerManager::sendTemplate(
         page
     );
 }
-
-// =====================================================
-// Statische Datei senden
-// =====================================================
 
 void WebServerManager::sendFile(
     const String& path,
@@ -697,10 +663,6 @@ void WebServerManager::sendFile(
     file.close();
 }
 
-// =====================================================
-// Datei aus LittleFS laden
-// =====================================================
-
 String WebServerManager::loadFile(
     const String& path
 )
@@ -742,10 +704,6 @@ String WebServerManager::loadFile(
 
     return content;
 }
-
-// =====================================================
-// Platzhalter ersetzen
-// =====================================================
 
 String WebServerManager::processTemplate(
     String page
@@ -817,10 +775,15 @@ String WebServerManager::processTemplate(
         )
     );
 
-page.replace(
-    "{{TANK_HEIGHT}}",
-    String(Settings::data.tankHeight, 1)
-);
+    page.replace(
+        "{{TANK_HEIGHT}}",
+        String(
+            static_cast<float>(
+                Settings::data.tankHeight
+            ),
+            1
+        )
+    );
 
     page.replace(
         "{{MEASURE_INTERVAL}}",
@@ -828,21 +791,69 @@ page.replace(
             Settings::data.measureInterval
         )
     );
-Logger::info(
-    "Template tank height: " +
-    String(Settings::data.tankHeight, 1)
-);
 
-Logger::info(
-    String("Tank placeholder remains: ") +
-    (page.indexOf("{{TANK_HEIGHT}}") >= 0 ? "yes" : "no")
-);
+    page.replace(
+        "{{DISTANCE_CM}}",
+        Sensor::isValid()
+            ? String(
+                Sensor::getDistanceCm(),
+                1
+              )
+            : "-"
+    );
+
+    page.replace(
+        "{{WATER_LEVEL_CM}}",
+        Sensor::isValid()
+            ? String(
+                Sensor::getWaterLevelCm(),
+                1
+              )
+            : "-"
+    );
+
+    page.replace(
+        "{{FILL_PERCENT}}",
+        Sensor::isValid()
+            ? String(
+                Sensor::getPercentage()
+              )
+            : "-"
+    );
+
+    page.replace(
+        "{{SENSOR_STATUS}}",
+        Sensor::isValid()
+            ? "OK"
+            : "Noch keine gültige Messung"
+    );
+
+    page.replace(
+        "{{BATTERY_VOLTAGE}}",
+        String(
+            Battery::getVoltage(),
+            2
+        )
+    );
+
+    page.replace(
+        "{{BATTERY_PERCENT}}",
+        String(
+            Battery::getPercentage()
+        )
+    );
+
+    page.replace(
+        "{{BATTERY_STATUS}}",
+        Battery::isCritical()
+            ? "Kritisch"
+            : Battery::isLow()
+                ? "Niedrig"
+                : "OK"
+    );
+
     return page;
 }
-
-// =====================================================
-// Aktuelle IP-Adresse
-// =====================================================
 
 String WebServerManager::getIpAddress()
 {
@@ -858,10 +869,6 @@ String WebServerManager::getIpAddress()
 
     return "Nicht verbunden";
 }
-
-// =====================================================
-// Aktueller Netzwerkmodus
-// =====================================================
 
 String WebServerManager::getNetworkMode()
 {
@@ -885,10 +892,6 @@ String WebServerManager::getNetworkMode()
 
     return "Offline";
 }
-
-// =====================================================
-// HTML-Sonderzeichen absichern
-// =====================================================
 
 String WebServerManager::htmlEscape(
     const String& value

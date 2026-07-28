@@ -6,7 +6,8 @@ enum class ButtonEvent
 {
     None,
     ShortPress,
-    LongPress
+    WebServerPress,
+    ConfigPortalPress
 };
 
 class Button
@@ -19,7 +20,9 @@ public:
 private:
     static bool lastStableState;
     static bool lastReading;
-    static bool longPressSent;
+
+    static bool webServerPressSent;
+    static bool configPortalPressSent;
 
     static unsigned long lastChangeTime;
     static unsigned long pressedSince;

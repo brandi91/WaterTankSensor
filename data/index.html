@@ -11,9 +11,19 @@
         http-equiv="Cache-Control"
         content="no-cache, no-store, must-revalidate">
 
+    <meta
+        http-equiv="Pragma"
+        content="no-cache">
+
+    <meta
+        http-equiv="Expires"
+        content="0">
+
     <title>Water Tank Sensor</title>
 
-    <link rel="stylesheet" href="/style.css">
+    <link
+        rel="stylesheet"
+        href="/style.css">
 </head>
 
 <body>
@@ -21,22 +31,106 @@
 
     <header class="header">
         <h1>Water Tank Sensor</h1>
-        <p>Gerätekonfiguration</p>
+        <p>Dashboard und Gerätekonfiguration</p>
     </header>
 
+    <section class="dashboard-grid">
+
+        <div class="metric-card">
+            <div class="metric-label">
+                Füllstand
+            </div>
+
+            <div class="metric-value">
+                {{FILL_PERCENT}} %
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-label">
+                Wasserhöhe
+            </div>
+
+            <div class="metric-value">
+                {{WATER_LEVEL_CM}} cm
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-label">
+                Sensorabstand
+            </div>
+
+            <div class="metric-value">
+                {{DISTANCE_CM}} cm
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-label">
+                Batterie
+            </div>
+
+            <div class="metric-value">
+                {{BATTERY_PERCENT}} %
+            </div>
+
+            <div class="metric-detail">
+                {{BATTERY_VOLTAGE}} V
+            </div>
+        </div>
+
+    </section>
+
     <section class="card">
-        <h2>Status</h2>
+        <h2>Systemstatus</h2>
 
         <div class="status">
             Gerätename: {{DEVICE_NAME}}<br>
             Firmware: {{FW_VERSION}}<br>
             IP-Adresse: {{IP_ADDRESS}}<br>
             WLAN-Signal: {{WIFI_RSSI}} dBm<br>
-            Betriebsmodus: {{NETWORK_MODE}}
+            Betriebsmodus: {{NETWORK_MODE}}<br>
+            Sensorstatus: {{SENSOR_STATUS}}<br>
+            Batteriestatus: {{BATTERY_STATUS}}
         </div>
     </section>
 
-    <form method="POST" action="/save">
+    <section class="card">
+        <h2>Aktionen</h2>
+
+        <div class="actions">
+
+            <form
+                method="POST"
+                action="/measure">
+
+                <button type="submit">
+                    Jetzt messen
+                </button>
+            </form>
+
+            <form
+                method="POST"
+                action="/sleep"
+                onsubmit="return confirm(
+                    'ESP32 jetzt in Deep Sleep versetzen?'
+                );">
+
+                <button
+                    type="submit"
+                    class="secondary-button">
+
+                    Sleep now
+                </button>
+            </form>
+
+        </div>
+    </section>
+
+    <form
+        method="POST"
+        action="/save">
 
         <section class="card">
             <h2>Gerät</h2>
@@ -75,6 +169,7 @@
                 id="wifiPassword"
                 name="wifiPassword"
                 type="password"
+                autocomplete="new-password"
                 placeholder="Unverändert lassen">
 
             <small>
@@ -142,6 +237,7 @@
                 id="mqttPassword"
                 name="mqttPassword"
                 type="password"
+                autocomplete="new-password"
                 placeholder="Unverändert lassen">
 
             <small>
@@ -150,8 +246,8 @@
             </small>
 
             <div class="warning">
-                MQTT-Einstellungen werden nach einem Neustart
-                vollständig übernommen.
+                MQTT-Einstellungen werden erst nach einem
+                Neustart vollständig übernommen.
             </div>
         </section>
 
@@ -190,7 +286,10 @@
 
     </form>
 
-    <section class="card" style="margin-top: 18px;">
+    <section
+        class="card"
+        style="margin-top: 18px;">
+
         <h2>System</h2>
 
         <p>
@@ -201,7 +300,9 @@
         <form
             method="POST"
             action="/restart"
-            onsubmit="return confirm('ESP32 wirklich neu starten?');">
+            onsubmit="return confirm(
+                'ESP32 wirklich neu starten?'
+            );">
 
             <button
                 type="submit"
