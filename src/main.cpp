@@ -9,6 +9,7 @@
 #include "battery.h"
 #include "button.h"
 #include "sensor.h"
+#include "wifi_manager.h"
 
 unsigned long lastBatteryLog = 0;
 
@@ -25,6 +26,17 @@ Logger::begin();
 SleepManager::begin();
 
 Settings::begin();
+    if (Settings::data.wifiSsid.isEmpty())
+    {
+        Settings::data.wifiSsid = "Bartlingsend";
+        Settings::data.wifiPassword = "gefunden";
+    }
+
+
+
+
+WifiManager::begin();
+WifiManager::connect();
 Battery::begin();
 Led::begin();
 Button::begin();
@@ -48,9 +60,12 @@ Sensor::begin();
     );
 
 #ifdef DEBUG_LED_TEST
+if (SleepManager::getWakeupReason() == WakeupReason::PowerOn)
+{
     Logger::info("Running LED self test...");
     Led::test();
     Logger::info("LED self test finished");
+}
 #endif
 
     Logger::info("System ready.");
@@ -62,7 +77,7 @@ void loop()
     Button::loop();
     Battery::loop();
     Sensor::loop();
-
+    WifiManager::loop();
     switch (Button::getEvent())
     {
 case ButtonEvent::LongPress:
