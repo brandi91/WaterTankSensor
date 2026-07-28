@@ -19,14 +19,17 @@
 #define PIN_RGB_RED    25
 #define PIN_RGB_GREEN  26
 #define PIN_RGB_BLUE   27
-// true = gemeinsame Kathode (Common Cathode)
-// false = gemeinsame Anode (Common Anode)
+
+#define PIN_BUTTON 33
+#define BUTTON_DEBOUNCE_MS 50
+#define BUTTON_LONG_PRESS_MS 3000
+
+#define PIN_BATTERY    34
 #define RGB_COMMON_CATHODE true
 
 
-#define PIN_BUTTON     0
 
-#define PIN_BATTERY    34
+
 
 // --------------------------------------------------
 // Tank
@@ -51,3 +54,6 @@
 #define DEFAULT_HOSTNAME "WaterTankSensor"
 
 // --------------------------------------------------
+
+// LED-Test beim Start aktivieren/deaktivieren
+#define DEBUG_LED_TEST
