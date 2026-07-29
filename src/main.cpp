@@ -36,9 +36,6 @@ bool webIndicatorLedState = false;
 unsigned long lastWebIndicatorToggle = 0;
 unsigned long webIndicatorStartedAt = 0;
 
-constexpr unsigned long WEB_INDICATOR_DURATION_MS =
-    15000UL;
-
 void updateWebIndicator()
 {
     if (
@@ -56,10 +53,10 @@ void updateWebIndicator()
      * Nach 15 Sekunden Blinken abschalten.
      * Webserver oder Config-AP laufen weiter.
      */
-    if (
-        now - webIndicatorStartedAt >=
-        WEB_INDICATOR_DURATION_MS
-    )
+if (
+    now - webIndicatorStartedAt >=
+    WEB_LED_INDICATOR_DURATION_MS
+)
     {
         webIndicatorMode =
             WebIndicatorMode::Off;

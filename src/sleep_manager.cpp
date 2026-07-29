@@ -1,10 +1,12 @@
 #include "sleep_manager.h"
 
 #include "config.h"
-#include "logger.h"
 #include "led.h"
+#include "logger.h"
+#include "settings.h"
 
-WakeupReason SleepManager::wakeupReason = WakeupReason::Unknown;
+WakeupReason SleepManager::wakeupReason =
+    WakeupReason::Unknown;
 
 void SleepManager::begin()
 {
@@ -24,37 +26,48 @@ void SleepManager::detectWakeupReason()
     switch (cause)
     {
         case ESP_SLEEP_WAKEUP_TIMER:
-            wakeupReason = WakeupReason::Timer;
+            wakeupReason =
+                WakeupReason::Timer;
             break;
 
         case ESP_SLEEP_WAKEUP_EXT0:
-            wakeupReason = WakeupReason::Button;
+            wakeupReason =
+                WakeupReason::Button;
             break;
 
         case ESP_SLEEP_WAKEUP_UNDEFINED:
-            wakeupReason = WakeupReason::PowerOn;
+            wakeupReason =
+                WakeupReason::PowerOn;
             break;
 
         default:
-            wakeupReason = WakeupReason::Unknown;
+            wakeupReason =
+                WakeupReason::Unknown;
             break;
     }
 }
 
 void SleepManager::prepareForSleep()
 {
-    Logger::info("Preparing for deep sleep");
+    Logger::info(
+        "Preparing for deep sleep"
+    );
 
     Led::off();
 
     delay(100);
 }
 
-void SleepManager::sleepForSeconds(uint32_t seconds)
+void SleepManager::sleepForSeconds(
+    uint32_t seconds
+)
 {
     if (seconds == 0)
     {
-        Logger::warning("Sleep time must be greater than 0");
+        Logger::warning(
+            "Sleep time must be greater than 0"
+        );
+
         return;
     }
 
@@ -76,14 +89,15 @@ void SleepManager::sleepForSeconds(uint32_t seconds)
 
     prepareForSleep();
 
-    // Timer-Wakeup
     esp_sleep_enable_timer_wakeup(
-        static_cast<uint64_t>(seconds) * 1000000ULL
+        static_cast<uint64_t>(seconds) *
+        1000000ULL
     );
 
-    // Taster-Wakeup über GPIO33, aktiv LOW
     esp_sleep_enable_ext0_wakeup(
-        static_cast<gpio_num_t>(PIN_BUTTON),
+        static_cast<gpio_num_t>(
+            PIN_BUTTON
+        ),
         BUTTON_WAKEUP_LEVEL
     );
 
@@ -96,7 +110,25 @@ void SleepManager::sleepForSeconds(uint32_t seconds)
 
 void SleepManager::sleepNow()
 {
-    sleepForSeconds(DEFAULT_SLEEP_TIME_SECONDS);
+    uint32_t sleepSeconds =
+        static_cast<uint32_t>(
+            Settings::data.measureInterval
+        );
+
+    if (sleepSeconds == 0)
+    {
+        sleepSeconds =
+            DEFAULT_MEASURE_INTERVAL;
+    }
+
+    Logger::info(
+        "Using configured measure interval "
+        "as deep-sleep interval"
+    );
+
+    sleepForSeconds(
+        sleepSeconds
+    );
 }
 
 WakeupReason SleepManager::getWakeupReason()
