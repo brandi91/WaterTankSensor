@@ -31,6 +31,7 @@ private:
     static void registerRoutes();
 
     static void handleRoot();
+    static void handleStatus();
     static void handleSave();
     static void handleMeasure();
     static void handleSleep();
