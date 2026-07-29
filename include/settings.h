@@ -31,18 +31,12 @@ struct SettingsData
     String deviceName;
 
     /*
-     * Tankhöhe:
-     * Nutzbare Höhe zwischen Tankboden und maximalem
-     * Wasserstand.
+     * Nutzbare Tankhöhe.
      */
     float tankHeight = 100.0f;
 
     /*
-     * Sensor Clearance:
      * Abstand zwischen Sensor und maximalem Wasserstand.
-     *
-     * Der Sensor bleibt dadurch auch bei vollem Tank
-     * oberhalb des Wassers.
      */
     float sensorClearance = 12.0f;
 
@@ -50,6 +44,17 @@ struct SettingsData
      * Mess- und Deep-Sleep-Intervall in Sekunden.
      */
     uint16_t measureInterval = 300;
+
+    /*
+     * Battery Estimate Test Mode:
+     *
+     * true:
+     * 5 Messpunkte und mindestens 2 Minuten.
+     *
+     * false:
+     * 30 Messpunkte und mindestens 24 Stunden.
+     */
+    bool batteryEstimateTestMode = false;
 };
 
 

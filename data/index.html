@@ -202,12 +202,24 @@
                 <div class="panel-separator"></div>
 
                 <div class="battery-estimate">
-                    <span>Estimated time remaining</span>
+    <span>Estimated time remaining</span>
 
-                    <strong>
-                        Not available yet
-                    </strong>
-                </div>
+    <strong id="batteryEstimate">
+        {{BATTERY_ESTIMATE}}
+    </strong>
+
+    <small class="battery-learning-details">
+        <span id="batterySampleCount">
+            {{BATTERY_SAMPLE_COUNT}}
+        </span>
+        samples ·
+        {{BATTERY_LEARNING_HOURS}} learning hours
+    </small>
+
+    <small class="battery-mode-label">
+        {{BATTERY_TEST_MODE_STATUS}}
+    </small>
+</div>
 
             </article>
 
@@ -642,28 +654,96 @@
                             <span>cm</span>
                         </div>
 
-                        <small class="field-help">
-                            Air gap between the sensor and the
-                            maximum water level.
-                        </small>
+<small class="field-help">
+    Air gap between the sensor and the
+    maximum water level.
+</small>
 
-                    </section>
-
-                </div>
+</section>
 
 
-                <button
-                    type="submit"
-                    class="save-settings-button">
+<!-- Battery estimate settings -->
 
-                    Save All Settings
-                </button>
+<section class="settings-card">
 
-            </form>
+    <h3>Battery Estimate</h3>
 
-        </details>
+    <label class="switch-row">
 
-    </main>
+        <span>Test Mode</span>
+
+        <span class="switch-control">
+            <input
+                type="checkbox"
+                name="batteryEstimateTestMode"
+                value="1"
+                {{BATTERY_TEST_MODE_CHECKED}}>
+
+            <span class="switch-slider"></span>
+        </span>
+
+    </label>
+
+    <small class="field-help">
+        Test mode needs at least 5 samples
+        and 2 minutes.
+    </small>
+
+    <small class="field-help">
+        Normal mode needs at least 30 samples
+        and 24 hours.
+    </small>
+
+    <div class="battery-estimator-state">
+        <span>Current estimate</span>
+
+        <strong>
+            {{BATTERY_ESTIMATE}}
+        </strong>
+
+        <span>
+            Samples: {{BATTERY_SAMPLE_COUNT}}
+        </span>
+    </div>
+
+</section>
+
+</div>
+
+
+<button
+    type="submit"
+    class="save-settings-button">
+
+    Save All Settings
+</button>
+
+</form>
+
+
+<form
+    method="POST"
+    action="/reset-battery-estimate"
+    class="battery-reset-form"
+    onsubmit="return confirm(
+        'Reset all learned battery estimate data?'
+    );">
+
+    <button
+        type="submit"
+        class="battery-reset-button">
+
+        Reset Battery Estimate
+    </button>
+
+    <small>
+        Use this after replacing or charging the battery.
+        Device, Wi-Fi and tank settings are not deleted.
+    </small>
+
+</form>
+
+</details>
 
 
     <!-- =====================================================
@@ -679,14 +759,28 @@
 
 <script>
     (function () {
+        /*
+         * =====================================================
+         * Initial tank gauge
+         * =====================================================
+         */
+
         const rawLevel = "{{FILL_PERCENT}}";
-        const parsedLevel = Number.parseFloat(rawLevel);
+        const parsedLevel =
+            Number.parseFloat(rawLevel);
 
-        const safeLevel = Number.isFinite(parsedLevel)
-            ? Math.min(100, Math.max(0, parsedLevel))
-            : 0;
+        const safeLevel =
+            Number.isFinite(parsedLevel)
+                ? Math.min(
+                    100,
+                    Math.max(0, parsedLevel)
+                )
+                : 0;
 
-        const gauge = document.getElementById("tankGauge");
+        const gauge =
+            document.getElementById(
+                "tankGauge"
+            );
 
         if (gauge) {
             gauge.style.setProperty(
@@ -695,14 +789,140 @@
             );
         }
 
-        const updated = document.getElementById(
-            "lastUpdated"
-        );
+
+        /*
+         * =====================================================
+         * Initial update time
+         * =====================================================
+         */
+
+        const updated =
+            document.getElementById(
+                "lastUpdated"
+            );
 
         if (updated) {
             updated.textContent =
                 new Date().toLocaleTimeString();
         }
+
+
+        /*
+         * =====================================================
+         * Refresh dashboard status
+         * =====================================================
+         */
+
+        async function refreshStatus() {
+            try {
+                const response =
+                    await fetch(
+                        "/status",
+                        {
+                            cache: "no-store"
+                        }
+                    );
+
+                if (!response.ok) {
+                    throw new Error(
+                        "Status request failed"
+                    );
+                }
+
+                const data =
+                    await response.json();
+
+
+                /*
+                 * Tank gauge
+                 */
+
+                const level =
+                    Number.parseFloat(
+                        data.fillPercent
+                    );
+
+                if (
+                    gauge &&
+                    Number.isFinite(level)
+                ) {
+                    const safeUpdatedLevel =
+                        Math.min(
+                            100,
+                            Math.max(0, level)
+                        );
+
+                    gauge.style.setProperty(
+                        "--tank-level",
+                        safeUpdatedLevel
+                    );
+                }
+
+
+                /*
+                 * Battery estimate
+                 */
+
+                const batteryEstimate =
+                    document.getElementById(
+                        "batteryEstimate"
+                    );
+
+                if (
+                    batteryEstimate &&
+                    data.batteryEstimate
+                ) {
+                    batteryEstimate.textContent =
+                        data.batteryEstimate;
+                }
+
+
+                /*
+                 * Battery sample count
+                 */
+
+                const batterySampleCount =
+                    document.getElementById(
+                        "batterySampleCount"
+                    );
+
+                if (
+                    batterySampleCount &&
+                    data.batterySamples !==
+                        undefined
+                ) {
+                    batterySampleCount.textContent =
+                        data.batterySamples;
+                }
+
+
+                /*
+                 * Last update time
+                 */
+
+                if (updated) {
+                    updated.textContent =
+                        new Date()
+                            .toLocaleTimeString();
+                }
+            }
+            catch (error) {
+                console.warn(
+                    "Could not refresh dashboard:",
+                    error
+                );
+            }
+        }
+
+
+        /*
+         * Status every 5 seconds
+         */
+
+        setInterval(
+            refreshStatus,
+            5000
+        );
     })();
 </script>
 

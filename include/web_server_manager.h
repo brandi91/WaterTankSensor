@@ -28,12 +28,19 @@ private:
     static bool sleepPending;
     static unsigned long sleepAt;
 
+    /*
+     * Wird für Batterielernpunkte verwendet,
+     * die über den Web-Messbutton entstehen.
+     */
+    static unsigned long lastBatteryEstimatorSampleAt;
+
     static void registerRoutes();
 
     static void handleRoot();
     static void handleStatus();
     static void handleSave();
     static void handleMeasure();
+    static void handleResetBatteryEstimate();
     static void handleSleep();
     static void handleRestart();
     static void handleNotFound();

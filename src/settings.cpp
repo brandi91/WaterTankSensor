@@ -49,14 +49,20 @@ namespace
      * Neuer Preferences-Schlüssel für den Abstand
      * zwischen Sensor und maximalem Wasserstand.
      */
-    constexpr const char* KEY_SENSOR_CLEARANCE =
-        "clearance";
+constexpr const char* KEY_SENSOR_CLEARANCE =
+    "clearance";
 
-    constexpr const char* KEY_MEASURE_INTERVAL =
-        "interval";
+constexpr const char* KEY_MEASURE_INTERVAL =
+    "interval";
 
+/*
+ * Gespeicherter Schalter für den schnellen
+ * Battery-Estimator-Testmodus.
+ */
+constexpr const char* KEY_BATTERY_ESTIMATE_TEST_MODE =
+    "batteryTest";
 
-    Preferences preferences;
+Preferences preferences;
 }
 
 
@@ -187,16 +193,24 @@ void Settings::load()
             DEFAULT_MEASURE_INTERVAL
         );
 
-    if (data.measureInterval == 0)
-    {
-        data.measureInterval =
-            DEFAULT_MEASURE_INTERVAL;
-    }
+if (data.measureInterval == 0)
+{
+    data.measureInterval =
+        DEFAULT_MEASURE_INTERVAL;
+}
 
-
-    Logger::info(
-        "Settings loaded"
+/*
+ * Battery Estimate Test Mode laden.
+ */
+data.batteryEstimateTestMode =
+    preferences.getBool(
+        KEY_BATTERY_ESTIMATE_TEST_MODE,
+        false
     );
+
+Logger::info(
+    "Settings loaded"
+);
 
     Logger::info(
         "Tank height: " +
@@ -204,11 +218,20 @@ void Settings::load()
         " cm"
     );
 
-    Logger::info(
-        "Sensor clearance: " +
-        String(data.sensorClearance, 1) +
-        " cm"
-    );
+Logger::info(
+    "Sensor clearance: " +
+    String(data.sensorClearance, 1) +
+    " cm"
+);
+
+Logger::info(
+    "Battery estimate test mode: " +
+    String(
+        data.batteryEstimateTestMode
+            ? "enabled"
+            : "disabled"
+    )
+);
 }
 
 
@@ -276,14 +299,18 @@ void Settings::save()
     );
 
     preferences.putUShort(
-        KEY_MEASURE_INTERVAL,
-        data.measureInterval
-    );
+    KEY_MEASURE_INTERVAL,
+    data.measureInterval
+);
 
+preferences.putBool(
+    KEY_BATTERY_ESTIMATE_TEST_MODE,
+    data.batteryEstimateTestMode
+);
 
-    Logger::info(
-        "Settings saved"
-    );
+Logger::info(
+    "Settings saved"
+);
 }
 
 

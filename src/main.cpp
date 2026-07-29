@@ -7,6 +7,7 @@
 #include "settings.h"
 #include "led.h"
 #include "battery.h"
+#include "battery_estimator.h"
 #include "button.h"
 #include "sensor.h"
 #include "wifi_manager.h"
@@ -25,6 +26,18 @@ enum class WebIndicatorMode
 };
 
 unsigned long lastBatteryLog = 0;
+
+/*
+ * Zeitpunkt des letzten BatteryEstimator-Messpunkts
+ * während dieses Boot-Vorgangs.
+ */
+unsigned long lastBatteryEstimatorSampleAt = 0;
+
+/*
+ * Beim ersten Messpunkt nach einem Timer-Wakeup
+ * verwenden wir das konfigurierte Sleep-Intervall.
+ */
+bool firstBatteryEstimatorSampleThisBoot = true;
 
 bool automaticWebServerAllowed = false;
 bool automaticWebServerStarted = false;
@@ -146,7 +159,6 @@ void startConfigPortalIndicator()
         WebIndicatorMode::ConfigPortal;
 
     webIndicatorLedState = true;
-
     webIndicatorStartedAt = now;
     lastWebIndicatorToggle = now;
 
@@ -156,6 +168,58 @@ void startConfigPortalIndicator()
         0
     );
 }
+
+
+/*
+ * Bestimmt die Zeit seit dem vorherigen
+ * Batterielernpunkt.
+ */
+uint32_t getBatteryEstimatorElapsedSeconds()
+{
+    const unsigned long now =
+        millis();
+
+    /*
+     * Nach einem Timer-Wakeup ist millis() wieder bei null.
+     * Deshalb verwenden wir beim ersten Messpunkt das
+     * konfigurierte Deep-Sleep-Intervall.
+     */
+    if (firstBatteryEstimatorSampleThisBoot)
+    {
+        firstBatteryEstimatorSampleThisBoot =
+            false;
+
+        lastBatteryEstimatorSampleAt =
+            now;
+
+        if (
+            SleepManager::getWakeupReason() ==
+            WakeupReason::Timer
+        )
+        {
+            return static_cast<uint32_t>(
+                Settings::data.measureInterval
+            );
+        }
+
+        return 0;
+    }
+
+    const uint32_t elapsedSeconds =
+        static_cast<uint32_t>(
+            (
+                now -
+                lastBatteryEstimatorSampleAt
+            ) /
+            1000UL
+        );
+
+    lastBatteryEstimatorSampleAt =
+        now;
+
+    return elapsedSeconds;
+}
+
 
 void performMeasurement()
 {
@@ -172,24 +236,38 @@ void performMeasurement()
         255
     );
 
-    if (Sensor::measure())
-    {
-        Logger::info(
-            "Tank measurement successful"
-        );
+if (Sensor::measure())
+{
+    Logger::info(
+        "Tank measurement successful"
+    );
 
-        Led::setColor(
-            0,
-            255,
-            0
-        );
+    /*
+     * Aktuelle Batteriespannung als neuen
+     * Lernpunkt übernehmen.
+     */
+    BatteryEstimator::addSample(
+        Battery::getVoltage(),
+        getBatteryEstimatorElapsedSeconds()
+    );
+
+    Logger::info(
+        "Battery estimator: " +
+        BatteryEstimator::getDisplayText()
+    );
+
+    Led::setColor(
+        0,
+        255,
+        0
+    );
 
 #if MQTT_ENABLED
-        MqttManager::publishMeasurement();
+    MqttManager::publishMeasurement();
 #endif
 
-        delay(500);
-    }
+    delay(500);
+}
     else
     {
         Logger::warning(
@@ -267,6 +345,7 @@ void setup()
     }
 
     Battery::begin();
+    BatteryEstimator::begin();
     Led::begin();
     Button::begin();
     Sensor::begin();

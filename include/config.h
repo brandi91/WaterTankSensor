@@ -171,7 +171,7 @@
  * ESP32 geht wirklich in Deep Sleep.
  */
 
-#define DEBUG_DISABLE_DEEP_SLEEP true
+#define DEBUG_DISABLE_DEEP_SLEEP false
 
 /*
  * Der Taster verbindet GPIO 33 beim Drücken mit GND.

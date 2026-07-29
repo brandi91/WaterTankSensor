@@ -1137,7 +1137,83 @@ input {
  * Responsive
  * ============================================================
  */
+/*
+ * ============================================================
+ * Battery estimator
+ * ============================================================
+ */
 
+.battery-learning-details,
+.battery-mode-label {
+    display: block;
+
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.battery-mode-label {
+    color: var(--blue-bright);
+}
+
+.battery-estimator-state {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    margin-top: 19px;
+    padding: 13px;
+
+    border: 1px solid var(--border);
+    border-radius: var(--radius-small);
+
+    background: rgba(22, 119, 255, 0.06);
+}
+
+.battery-estimator-state span {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.battery-estimator-state strong {
+    color: var(--green);
+    font-size: 17px;
+}
+
+.battery-reset-form {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+
+    margin: 0 20px 22px;
+    padding-top: 18px;
+
+    border-top: 1px solid var(--border);
+}
+
+.battery-reset-form small {
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.battery-reset-button {
+    width: 100%;
+    padding: 13px 18px;
+
+    border: 1px solid rgba(255, 82, 82, 0.8);
+    border-radius: var(--radius-medium);
+
+    background: rgba(255, 82, 82, 0.05);
+    color: var(--red);
+
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.battery-reset-button:hover {
+    background: rgba(255, 82, 82, 0.12);
+}
 @media (max-width: 1050px) {
     .overview-grid {
         grid-template-columns: 1fr;

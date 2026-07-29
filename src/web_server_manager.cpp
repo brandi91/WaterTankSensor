@@ -4,6 +4,7 @@
 #include <LittleFS.h>
 
 #include "battery.h"
+#include "battery_estimator.h"
 #include "config.h"
 #include "led.h"
 #include "logger.h"
@@ -31,6 +32,13 @@ unsigned long WebServerManager::restartAt = 0;
 
 bool WebServerManager::sleepPending = false;
 unsigned long WebServerManager::sleepAt = 0;
+
+/*
+ * Zeitpunkt des letzten Batterielernpunkts,
+ * der über die Weboberfläche ausgelöst wurde.
+ */
+unsigned long
+    WebServerManager::lastBatteryEstimatorSampleAt = 0;
 
 void WebServerManager::begin()
 {
@@ -209,7 +217,6 @@ bool WebServerManager::isConfigPortalActive()
 {
     return configPortalActive;
 }
-
 void WebServerManager::registerRoutes()
 {
     server.on(
@@ -234,6 +241,12 @@ void WebServerManager::registerRoutes()
         "/measure",
         HTTP_POST,
         handleMeasure
+    );
+
+    server.on(
+        "/reset-battery-estimate",
+        HTTP_POST,
+        handleResetBatteryEstimate
     );
 
     server.on(
@@ -313,7 +326,6 @@ void WebServerManager::registerRoutes()
         handleNotFound
     );
 }
-
 void WebServerManager::handleRoot()
 {
     server.sendHeader(
@@ -439,11 +451,27 @@ void WebServerManager::handleStatus()
     json += sensorStatus;
     json += "\",";
 
-    json += "\"batteryStatus\":\"";
-    json += batteryStatus;
-    json += "\",";
+json += "\"batteryStatus\":\"";
+json += batteryStatus;
+json += "\",";
 
-    json += "\"mqttStatus\":\"";
+json += "\"batteryEstimate\":\"";
+json += BatteryEstimator::getDisplayText();
+json += "\",";
+
+json += "\"batterySamples\":";
+json += String(
+    BatteryEstimator::getSampleCount()
+);
+json += ",";
+
+json += "\"batteryTestMode\":";
+json += Settings::data.batteryEstimateTestMode
+    ? "true"
+    : "false";
+json += ",";
+
+json += "\"mqttStatus\":\"";
 
 #if MQTT_ENABLED
     json += MqttManager::getStateText();
@@ -578,23 +606,32 @@ void WebServerManager::handleSave()
     }
 
 
-    if (server.hasArg("measureInterval"))
+if (server.hasArg("measureInterval"))
+{
+    const long interval =
+        server.arg(
+            "measureInterval"
+        ).toInt();
+
+    if (interval > 0)
     {
-        const long interval =
-            server.arg(
-                "measureInterval"
-            ).toInt();
-
-        if (interval > 0)
-        {
-            Settings::data.measureInterval =
-                static_cast<unsigned long>(
-                    interval
-                );
-        }
+        Settings::data.measureInterval =
+            static_cast<uint16_t>(
+                interval
+            );
     }
+}
 
-    Settings::save();
+/*
+ * Ein nicht gesetztes Checkbox-Feld wird vom
+ * Browser überhaupt nicht übertragen.
+ */
+Settings::data.batteryEstimateTestMode =
+    server.hasArg(
+        "batteryEstimateTestMode"
+    );
+
+Settings::save();
 
     Logger::info(
         "Configuration saved"
@@ -622,6 +659,39 @@ void WebServerManager::handleMeasure()
 
     if (measurementSuccessful)
     {
+        /*
+         * Vergangene Zeit seit dem letzten
+         * Web-Messpunkt bestimmen.
+         */
+        const unsigned long now =
+            millis();
+
+        uint32_t elapsedSeconds = 0;
+
+        if (lastBatteryEstimatorSampleAt > 0)
+        {
+            elapsedSeconds =
+                static_cast<uint32_t>(
+                    (
+                        now -
+                        lastBatteryEstimatorSampleAt
+                    ) /
+                    1000UL
+                );
+        }
+
+        lastBatteryEstimatorSampleAt = now;
+
+        BatteryEstimator::addSample(
+            Battery::getVoltage(),
+            elapsedSeconds
+        );
+
+        Logger::info(
+            "Battery estimator: " +
+            BatteryEstimator::getDisplayText()
+        );
+
         Led::setColor(
             0,
             255,
@@ -631,6 +701,10 @@ void WebServerManager::handleMeasure()
         Logger::info(
             "Web measurement successful"
         );
+
+#if MQTT_ENABLED
+        MqttManager::publishMeasurement();
+#endif
     }
     else
     {
@@ -665,7 +739,34 @@ void WebServerManager::handleMeasure()
         ""
     );
 }
+void WebServerManager::handleResetBatteryEstimate()
+{
+    Logger::warning(
+        "Battery estimate reset requested "
+        "from web interface"
+    );
 
+    BatteryEstimator::reset();
+
+    /*
+     * Auch den lokalen Web-Zeitpunkt zurücksetzen,
+     * damit die nächste Messung eine neue Lernphase
+     * beginnt.
+     */
+    lastBatteryEstimatorSampleAt = 0;
+
+    server.sendHeader(
+        "Location",
+        "/",
+        true
+    );
+
+    server.send(
+        303,
+        "text/plain",
+        ""
+    );
+}
 void WebServerManager::handleSleep()
 {
     Logger::info(
@@ -1016,16 +1117,56 @@ String WebServerManager::processTemplate(
         )
     );
 
-    page.replace(
-        "{{BATTERY_STATUS}}",
-        Battery::isCritical()
-            ? "Kritisch"
-            : Battery::isLow()
-                ? "Niedrig"
-                : "OK"
-    );
+ page.replace(
+    "{{BATTERY_STATUS}}",
+    Battery::isCritical()
+        ? "Critical"
+        : Battery::isLow()
+            ? "Low"
+            : "OK"
+);
 
-    return page;
+page.replace(
+    "{{BATTERY_ESTIMATE}}",
+    htmlEscape(
+        BatteryEstimator::getDisplayText()
+    )
+);
+
+page.replace(
+    "{{BATTERY_SAMPLE_COUNT}}",
+    String(
+        BatteryEstimator::getSampleCount()
+    )
+);
+
+page.replace(
+    "{{BATTERY_LEARNING_HOURS}}",
+    String(
+        static_cast<float>(
+            BatteryEstimator::
+                getLearningSeconds()
+        ) /
+        3600.0f,
+        1
+    )
+);
+
+page.replace(
+    "{{BATTERY_TEST_MODE_CHECKED}}",
+    Settings::data.batteryEstimateTestMode
+        ? "checked"
+        : ""
+);
+
+page.replace(
+    "{{BATTERY_TEST_MODE_STATUS}}",
+    Settings::data.batteryEstimateTestMode
+        ? "Test mode active"
+        : "Normal mode"
+);
+
+return page;
 }
 
 String WebServerManager::getIpAddress()
