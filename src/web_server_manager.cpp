@@ -12,6 +12,10 @@
 #include "sleep_manager.h"
 #include "wifi_manager.h"
 
+#if MQTT_ENABLED
+#include "mqtt_manager.h"
+#endif
+
 WebServer WebServerManager::server(
     WEB_SERVER_PORT
 );
@@ -214,6 +218,12 @@ void WebServerManager::registerRoutes()
     );
 
     server.on(
+        "/status",
+        HTTP_GET,
+        handleStatus
+    );
+
+    server.on(
         "/save",
         HTTP_POST,
         handleSave
@@ -322,6 +332,128 @@ void WebServerManager::handleRoot()
 
     sendTemplate(
         "/index.html"
+    );
+}
+
+void WebServerManager::handleStatus()
+{
+    const bool sensorValid =
+        Sensor::isValid();
+
+    const String distance =
+        sensorValid
+            ? String(
+                Sensor::getDistanceCm(),
+                1
+              )
+            : "-";
+
+    const String waterLevel =
+        sensorValid
+            ? String(
+                Sensor::getWaterLevelCm(),
+                1
+              )
+            : "-";
+
+    const String fillPercent =
+        sensorValid
+            ? String(
+                Sensor::getPercentage()
+              )
+            : "-";
+
+    const String sensorStatus =
+        sensorValid
+            ? "OK"
+            : "Noch keine gültige Messung";
+
+    const String batteryStatus =
+        Battery::isCritical()
+            ? "Kritisch"
+            : Battery::isLow()
+                ? "Niedrig"
+                : "OK";
+
+    const String wifiRssi =
+        WifiManager::isConnected()
+            ? String(
+                WifiManager::getRssi()
+              )
+            : "-";
+
+    String json;
+
+    json.reserve(512);
+
+    json += "{";
+
+    json += "\"fillPercent\":\"";
+    json += fillPercent;
+    json += "\",";
+
+    json += "\"waterLevelCm\":\"";
+    json += waterLevel;
+    json += "\",";
+
+    json += "\"distanceCm\":\"";
+    json += distance;
+    json += "\",";
+
+    json += "\"batteryPercent\":";
+    json += String(
+        Battery::getPercentage()
+    );
+    json += ",";
+
+    json += "\"batteryVoltage\":\"";
+    json += String(
+        Battery::getVoltage(),
+        2
+    );
+    json += "\",";
+
+    json += "\"wifiRssi\":\"";
+    json += wifiRssi;
+    json += "\",";
+
+    json += "\"ipAddress\":\"";
+    json += getIpAddress();
+    json += "\",";
+
+    json += "\"networkMode\":\"";
+    json += getNetworkMode();
+    json += "\",";
+
+    json += "\"sensorStatus\":\"";
+    json += sensorStatus;
+    json += "\",";
+
+    json += "\"batteryStatus\":\"";
+    json += batteryStatus;
+    json += "\",";
+
+    json += "\"mqttStatus\":\"";
+
+#if MQTT_ENABLED
+    json += MqttManager::getStateText();
+#else
+    json += "Nicht eingebaut";
+#endif
+
+    json += "\"";
+
+    json += "}";
+
+    server.sendHeader(
+        "Cache-Control",
+        "no-cache, no-store, must-revalidate"
+    );
+
+    server.send(
+        200,
+        "application/json; charset=utf-8",
+        json
     );
 }
 

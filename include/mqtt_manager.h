@@ -16,15 +16,13 @@ class MqttManager
 public:
     static void begin();
     static void loop();
-
     static bool connect();
     static void disconnect();
-
     static bool publishStatus();
     static bool publishMeasurement();
-
     static bool isConnected();
     static MqttState getState();
+    static String getStateText();
 
 private:
     static MqttState state;

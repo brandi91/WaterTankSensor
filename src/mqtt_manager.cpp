@@ -286,6 +286,30 @@ MqttState MqttManager::getState()
     return state;
 }
 
+String MqttManager::getStateText()
+{
+    switch (state)
+    {
+        case MqttState::Disabled:
+            return "Deaktiviert";
+
+        case MqttState::Disconnected:
+            return "Nicht verbunden";
+
+        case MqttState::Connecting:
+            return "Verbindung wird aufgebaut";
+
+        case MqttState::Connected:
+            return "Verbunden";
+
+        case MqttState::ConnectionFailed:
+            return "Verbindung fehlgeschlagen";
+
+        default:
+            return "Unbekannt";
+    }
+}
+
 void MqttManager::callback(
     char* topic,
     byte* payload,

@@ -41,7 +41,10 @@
                 Füllstand
             </div>
 
-            <div class="metric-value">
+            <div
+                id="fillPercent"
+                class="metric-value">
+
                 {{FILL_PERCENT}} %
             </div>
         </div>
@@ -51,7 +54,10 @@
                 Wasserhöhe
             </div>
 
-            <div class="metric-value">
+            <div
+                id="waterLevel"
+                class="metric-value">
+
                 {{WATER_LEVEL_CM}} cm
             </div>
         </div>
@@ -61,7 +67,10 @@
                 Sensorabstand
             </div>
 
-            <div class="metric-value">
+            <div
+                id="distance"
+                class="metric-value">
+
                 {{DISTANCE_CM}} cm
             </div>
         </div>
@@ -71,11 +80,17 @@
                 Batterie
             </div>
 
-            <div class="metric-value">
+            <div
+                id="batteryPercent"
+                class="metric-value">
+
                 {{BATTERY_PERCENT}} %
             </div>
 
-            <div class="metric-detail">
+            <div
+                id="batteryVoltage"
+                class="metric-detail">
+
                 {{BATTERY_VOLTAGE}} V
             </div>
         </div>
@@ -86,14 +101,54 @@
         <h2>Systemstatus</h2>
 
         <div class="status">
-            Gerätename: {{DEVICE_NAME}}<br>
-            Firmware: {{FW_VERSION}}<br>
-            IP-Adresse: {{IP_ADDRESS}}<br>
-            WLAN-Signal: {{WIFI_RSSI}} dBm<br>
-            Betriebsmodus: {{NETWORK_MODE}}<br>
-            Sensorstatus: {{SENSOR_STATUS}}<br>
-            Batteriestatus: {{BATTERY_STATUS}}
+            Gerätename:
+            {{DEVICE_NAME}}
+            <br>
+
+            Firmware:
+            {{FW_VERSION}}
+            <br>
+
+            IP-Adresse:
+            <span id="ipAddress">
+                {{IP_ADDRESS}}
+            </span>
+            <br>
+
+            WLAN-Signal:
+            <span id="wifiRssi">
+                {{WIFI_RSSI}}
+            </span>
+            dBm
+            <br>
+
+            Betriebsmodus:
+            <span id="networkMode">
+                {{NETWORK_MODE}}
+            </span>
+            <br>
+
+            Sensorstatus:
+            <span id="sensorStatus">
+                {{SENSOR_STATUS}}
+            </span>
+            <br>
+
+            Batteriestatus:
+            <span id="batteryStatus">
+                {{BATTERY_STATUS}}
+            </span>
+            <br>
+
+            MQTT-Status:
+            <span id="mqttStatus">
+                Wird geladen …
+            </span>
         </div>
+
+        <small id="statusUpdateText">
+            Status wird alle 15 Sekunden aktualisiert.
+        </small>
     </section>
 
     <section class="card">
@@ -278,6 +333,11 @@
                 min="1"
                 value="{{MEASURE_INTERVAL}}"
                 required>
+
+            <small>
+                Nach einer automatischen Messung schläft das
+                Gerät für diesen Zeitraum.
+            </small>
         </section>
 
         <button type="submit">
@@ -318,5 +378,119 @@
     </footer>
 
 </div>
+
+<script>
+    async function updateStatus()
+    {
+        const updateText =
+            document.getElementById(
+                "statusUpdateText"
+            );
+
+        try
+        {
+            const response = await fetch(
+                "/status",
+                {
+                    cache: "no-store"
+                }
+            );
+
+            if (!response.ok)
+            {
+                throw new Error(
+                    "HTTP " + response.status
+                );
+            }
+
+            const status =
+                await response.json();
+
+            document.getElementById(
+                "fillPercent"
+            ).textContent =
+                status.fillPercent + " %";
+
+            document.getElementById(
+                "waterLevel"
+            ).textContent =
+                status.waterLevelCm + " cm";
+
+            document.getElementById(
+                "distance"
+            ).textContent =
+                status.distanceCm + " cm";
+
+            document.getElementById(
+                "batteryPercent"
+            ).textContent =
+                status.batteryPercent + " %";
+
+            document.getElementById(
+                "batteryVoltage"
+            ).textContent =
+                status.batteryVoltage + " V";
+
+            document.getElementById(
+                "ipAddress"
+            ).textContent =
+                status.ipAddress;
+
+            document.getElementById(
+                "wifiRssi"
+            ).textContent =
+                status.wifiRssi;
+
+            document.getElementById(
+                "networkMode"
+            ).textContent =
+                status.networkMode;
+
+            document.getElementById(
+                "sensorStatus"
+            ).textContent =
+                status.sensorStatus;
+
+            document.getElementById(
+                "batteryStatus"
+            ).textContent =
+                status.batteryStatus;
+
+            document.getElementById(
+                "mqttStatus"
+            ).textContent =
+                status.mqttStatus;
+
+            const now =
+                new Date();
+
+            updateText.textContent =
+                "Zuletzt aktualisiert: " +
+                now.toLocaleTimeString(
+                    "de-DE"
+                );
+        }
+        catch (error)
+        {
+            updateText.textContent =
+                "Status konnte nicht aktualisiert werden.";
+        }
+    }
+
+    /*
+     * Erste Aktualisierung nach dem Laden.
+     */
+    updateStatus();
+
+    /*
+     * Danach alle 15 Sekunden nur die
+     * Statuswerte aktualisieren.
+     */
+    setInterval(
+        updateStatus,
+        15000
+    );
+</script>
+
 </body>
 </html>
