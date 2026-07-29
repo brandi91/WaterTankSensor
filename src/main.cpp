@@ -11,6 +11,7 @@
 #include "sensor.h"
 #include "wifi_manager.h"
 #include "web_server_manager.h"
+#include "version.h"
 
 #if MQTT_ENABLED
 #include "mqtt_manager.h"

@@ -1,162 +1,216 @@
-#include "sleep_manager.h"
+#pragma once
 
-#include "config.h"
-#include "logger.h"
-#include "led.h"
-#include "settings.h"
+/*
+ * ============================================================
+ * WaterTankSensor – zentrale Konfiguration
+ * ============================================================
+ */
 
-WakeupReason SleepManager::wakeupReason =
-    WakeupReason::Unknown;
 
-void SleepManager::begin()
-{
-    detectWakeupReason();
+/*
+ * ============================================================
+ * Ultraschallsensor
+ * ============================================================
+ */
 
-    Logger::info(
-        "Wakeup reason: " +
-        String(getWakeupReasonText())
-    );
-}
+#define PIN_TRIGGER 5
+#define PIN_ECHO 18
 
-void SleepManager::detectWakeupReason()
-{
-    const esp_sleep_wakeup_cause_t cause =
-        esp_sleep_get_wakeup_cause();
 
-    switch (cause)
-    {
-        case ESP_SLEEP_WAKEUP_TIMER:
-            wakeupReason =
-                WakeupReason::Timer;
-            break;
+/*
+ * ============================================================
+ * Status-LED
+ * ============================================================
+ */
 
-        case ESP_SLEEP_WAKEUP_EXT0:
-            wakeupReason =
-                WakeupReason::Button;
-            break;
+#define PIN_STATUS_LED 2
 
-        case ESP_SLEEP_WAKEUP_UNDEFINED:
-            wakeupReason =
-                WakeupReason::PowerOn;
-            break;
 
-        default:
-            wakeupReason =
-                WakeupReason::Unknown;
-            break;
-    }
-}
+/*
+ * ============================================================
+ * RGB-LED
+ * ============================================================
+ *
+ * true  = gemeinsame Kathode
+ * false = gemeinsame Anode
+ */
 
-void SleepManager::prepareForSleep()
-{
-    Logger::info(
-        "Preparing for deep sleep"
-    );
+#define PIN_RGB_RED 25
+#define PIN_RGB_GREEN 26
+#define PIN_RGB_BLUE 27
 
-    Led::off();
+#define RGB_COMMON_CATHODE true
 
-    delay(100);
-}
 
-void SleepManager::sleepForSeconds(
-    uint32_t seconds
-)
-{
-    if (seconds == 0)
-    {
-        Logger::warning(
-            "Sleep time must be greater than 0"
-        );
+/*
+ * ============================================================
+ * Taster
+ * ============================================================
+ *
+ * Der Taster befindet sich zwischen GPIO 33 und GND.
+ *
+ * Nicht gedrückt = HIGH
+ * Gedrückt       = LOW
+ */
 
-        return;
-    }
+#define PIN_BUTTON 33
 
-    Logger::info(
-        "Deep sleep for " +
-        String(seconds) +
-        " seconds"
-    );
+// Entprellzeit des Tasters
+#define BUTTON_DEBOUNCE_MS 50UL
 
-#if DEBUG_DISABLE_DEEP_SLEEP
+/*
+ * Nach 5 Sekunden:
+ * Webserver über das normale WLAN starten.
+ */
+#define BUTTON_WEB_SERVER_PRESS_MS 5000UL
 
-    Logger::warning(
-        "Deep sleep disabled in debug mode"
-    );
+/*
+ * Nach insgesamt 15 Sekunden:
+ * Konfigurations-AP und Webserver starten.
+ */
+#define BUTTON_CONFIG_PORTAL_PRESS_MS 15000UL
 
-    return;
 
-#else
+/*
+ * ============================================================
+ * Webserver-Anzeige über RGB-LED
+ * ============================================================
+ */
 
-    prepareForSleep();
+// Abstand zwischen LED ein und LED aus
+#define WEB_LED_BLINK_INTERVAL_MS 500UL
 
-    // Timer-Wakeup
-    esp_sleep_enable_timer_wakeup(
-        static_cast<uint64_t>(seconds) *
-        1000000ULL
-    );
+// Gesamtdauer des Blinkens: 15 Sekunden
+#define WEB_LED_INDICATOR_DURATION_MS 15000UL
 
-    // Taster-Wakeup über GPIO33, aktiv LOW
-    esp_sleep_enable_ext0_wakeup(
-        static_cast<gpio_num_t>(
-            PIN_BUTTON
-        ),
-        BUTTON_WAKEUP_LEVEL
-    );
 
-    Serial.flush();
+/*
+ * ============================================================
+ * Batteriespannungsmessung
+ * ============================================================
+ */
 
-    esp_deep_sleep_start();
+#define PIN_BATTERY 34
 
-#endif
-}
 
-void SleepManager::sleepNow()
-{
-    uint32_t sleepSeconds =
-        static_cast<uint32_t>(
-            Settings::data.measureInterval
-        );
+/*
+ * ============================================================
+ * Tank
+ * ============================================================
+ */
 
-    /*
-     * Sicherheitswert, falls aus den Einstellungen
-     * versehentlich 0 Sekunden geladen werden.
-     */
-    if (sleepSeconds == 0)
-    {
-        sleepSeconds =
-            DEFAULT_MEASURE_INTERVAL;
-    }
+/*
+ * Standard-Tankhöhe in Zentimetern.
+ */
+#define DEFAULT_TANK_HEIGHT_CM 100.0f
 
-    Logger::info(
-        "Using configured measure interval "
-        "as deep-sleep interval"
-    );
+/*
+ * Abstand zwischen Sensor und maximalem Wasserstand.
+ *
+ * Der Sensor befindet sich bei vollem Tank weiterhin
+ * diesen Abstand oberhalb der Wasseroberfläche.
+ */
+#define DEFAULT_SENSOR_CLEARANCE_CM 12.0f
+/*
+ * Standard-Messintervall in Sekunden.
+ */
+#define DEFAULT_MEASURE_INTERVAL 300UL
 
-    sleepForSeconds(
-        sleepSeconds
-    );
-}
 
-WakeupReason SleepManager::getWakeupReason()
-{
-    return wakeupReason;
-}
+/*
+ * ============================================================
+ * Messintervall
+ * ============================================================
+ *
+ * Wert in Sekunden.
+ *
+ * 300 Sekunden = 5 Minuten
+ *
+ * Dieser Wert wird ebenfalls als Deep-Sleep-Dauer verwendet,
+ * solange kein anderer Wert gespeichert wurde.
+ */
 
-const char* SleepManager::getWakeupReasonText()
-{
-    switch (wakeupReason)
-    {
-        case WakeupReason::PowerOn:
-            return "Power on / Reset";
+#define DEFAULT_MEASURE_INTERVAL 300UL
 
-        case WakeupReason::Timer:
-            return "Timer";
 
-        case WakeupReason::Button:
-            return "Button";
+/*
+ * ============================================================
+ * WLAN
+ * ============================================================
+ */
 
-        case WakeupReason::Unknown:
-        default:
-            return "Unknown";
-    }
-}
+#define DEFAULT_HOSTNAME "WaterTankSensor"
+
+// Maximale Wartezeit beim Verbinden
+#define WIFI_CONNECT_TIMEOUT_MS 15000UL
+
+// Abstand zwischen erneuten Verbindungsversuchen
+#define WIFI_RECONNECT_INTERVAL_MS 10000UL
+
+
+/*
+ * ============================================================
+ * LED-Selbsttest
+ * ============================================================
+ *
+ * Zum Deaktivieren diese Zeile auskommentieren.
+ */
+
+#define DEBUG_LED_TEST
+
+
+/*
+ * ============================================================
+ * Deep Sleep
+ * ============================================================
+ *
+ * true:
+ * Deep Sleep wird nur simuliert.
+ *
+ * false:
+ * ESP32 geht wirklich in Deep Sleep.
+ */
+
+#define DEBUG_DISABLE_DEEP_SLEEP true
+
+/*
+ * Der Taster verbindet GPIO 33 beim Drücken mit GND.
+ * Deshalb wird bei LOW aufgeweckt.
+ */
+
+#define BUTTON_WAKEUP_LEVEL 0
+
+
+/*
+ * ============================================================
+ * Konfigurations-Access-Point
+ * ============================================================
+ */
+
+#define CONFIG_AP_SSID "WaterTankSensor-Setup"
+#define CONFIG_AP_PASSWORD "watertank"
+
+
+/*
+ * ============================================================
+ * Webserver
+ * ============================================================
+ */
+
+#define WEB_SERVER_PORT 80
+
+
+/*
+ * ============================================================
+ * MQTT
+ * ============================================================
+ */
+
+// MQTT-Funktionen global ein- oder ausschalten
+#define MQTT_ENABLED false
+
+// Abstand zwischen Verbindungsversuchen
+#define MQTT_RECONNECT_INTERVAL_MS 10000UL
+
+// Abstand zwischen regelmäßigen MQTT-Veröffentlichungen
+#define MQTT_PUBLISH_INTERVAL_MS 30000UL

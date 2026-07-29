@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
 
@@ -27,469 +27,683 @@
 </head>
 
 <body>
-<div class="container">
 
-    <header class="header">
-        <h1>Water Tank Sensor</h1>
-        <p>Dashboard und Gerätekonfiguration</p>
+<div class="page-shell">
+
+    <!-- =====================================================
+         Header
+         ===================================================== -->
+
+    <header class="page-header">
+        <div>
+            <h1>Water Tank Sensor</h1>
+            <p>Overview &amp; Device Status</p>
+        </div>
+
+        <div class="header-badge">
+            Firmware {{FW_VERSION}}
+        </div>
     </header>
 
-    <section class="dashboard-grid">
 
-        <div class="metric-card">
-            <div class="metric-label">
-                Füllstand
+    <!-- =====================================================
+         Main dashboard
+         ===================================================== -->
+
+    <main>
+
+        <section class="overview-grid">
+
+            <!-- Tank level -->
+
+            <article class="panel tank-panel">
+
+                <div class="tank-gauge-column">
+
+                    <div
+                        class="tank-gauge"
+                        id="tankGauge">
+
+                        <div class="tank-gauge-inner">
+                            <strong>
+                                {{FILL_PERCENT}}<span>%</span>
+                            </strong>
+
+                            <small>Tank Level</small>
+
+                            <div class="level-state">
+                                {{SENSOR_STATUS}}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="water-lines">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+
+                    <div class="last-update">
+                        Last updated:
+                        <strong id="lastUpdated">
+                            just now
+                        </strong>
+                    </div>
+
+                </div>
+
+
+                <div class="tank-details-column">
+
+                    <div class="section-title-row">
+                        <h2>Tank Level Calculation</h2>
+
+                        <span
+                            class="info-dot"
+                            title="The sensor clearance is the air gap between the sensor and the maximum water level.">
+
+                            i
+                        </span>
+                    </div>
+
+
+                    <div class="measurement-list">
+
+                        <div class="measurement-row">
+                            <span class="measurement-icon blue">
+                                ●
+                            </span>
+
+                            <span class="measurement-name">
+                                Water Height
+                            </span>
+
+                            <span class="measurement-line"></span>
+
+                            <strong>
+                                {{WATER_LEVEL_CM}}
+                                <small>cm</small>
+                            </strong>
+                        </div>
+
+
+                        <div class="measurement-row">
+                            <span class="measurement-icon green">
+                                ↕
+                            </span>
+
+                            <span class="measurement-name">
+                                Distance to Water
+                            </span>
+
+                            <span class="measurement-line"></span>
+
+                            <strong>
+                                {{DISTANCE_CM}}
+                                <small>cm</small>
+                            </strong>
+                        </div>
+
+
+                        <div class="measurement-row">
+                            <span class="measurement-icon purple">
+                                ↥
+                            </span>
+
+                            <span class="measurement-name">
+                                Sensor Clearance
+
+                                <small class="measurement-description">
+                                    Mounting offset
+                                </small>
+                            </span>
+
+                            <span class="measurement-line"></span>
+
+                            <strong>
+                                {{SENSOR_CLEARANCE}}
+                                <small>cm</small>
+                            </strong>
+                        </div>
+
+                    </div>
+
+
+                    <div class="calculation-note">
+                        Tank level is calculated using the configured
+                        tank height, measured distance and sensor clearance.
+                    </div>
+
+                </div>
+
+            </article>
+
+
+            <!-- Battery -->
+
+            <article class="panel battery-panel">
+
+                <div class="battery-heading">
+                    <div class="battery-icon">
+                        <span></span>
+                    </div>
+
+                    <span>Battery</span>
+                </div>
+
+                <div class="battery-percentage">
+                    {{BATTERY_PERCENT}}<span>%</span>
+                </div>
+
+                <div class="battery-voltage">
+                    {{BATTERY_VOLTAGE}} V
+                </div>
+
+                <div class="panel-separator"></div>
+
+                <div class="battery-estimate">
+                    <span>Estimated time remaining</span>
+
+                    <strong>
+                        Not available yet
+                    </strong>
+                </div>
+
+            </article>
+
+        </section>
+
+
+        <!-- =================================================
+             Quick status
+             ================================================= -->
+
+        <section class="panel quick-status-panel">
+
+            <h2>Quick Status</h2>
+
+            <div class="quick-status-grid">
+
+                <div class="quick-status-item">
+                    <span class="status-circle status-ok">
+                        ✓
+                    </span>
+
+                    <div>
+                        <span>Sensor</span>
+                        <strong>{{SENSOR_STATUS}}</strong>
+                    </div>
+                </div>
+
+
+                <div class="quick-status-item">
+                    <span class="status-circle status-ok">
+                        ✓
+                    </span>
+
+                    <div>
+                        <span>Battery</span>
+                        <strong>{{BATTERY_STATUS}}</strong>
+                    </div>
+                </div>
+
+
+                <div class="quick-status-item">
+                    <span class="status-symbol status-blue">
+                        ◉
+                    </span>
+
+                    <div>
+                        <span>Wi-Fi</span>
+                        <strong>{{NETWORK_MODE}}</strong>
+                    </div>
+                </div>
+
+
+                <div class="quick-status-item">
+                    <span class="status-symbol">
+                        ▣
+                    </span>
+
+                    <div>
+                        <span>MQTT</span>
+                        <strong>Not installed</strong>
+                    </div>
+                </div>
+
             </div>
 
-            <div
-                id="fillPercent"
-                class="metric-value">
+        </section>
 
-                {{FILL_PERCENT}} %
+
+        <!-- =================================================
+             Technical details
+             ================================================= -->
+
+        <details class="panel details-panel">
+
+            <summary>
+                <span class="summary-icon">⚙</span>
+                Technical Details
+            </summary>
+
+            <div class="details-content">
+
+                <div class="details-column">
+
+                    <div class="detail-row">
+                        <span>Device Name</span>
+                        <strong>{{DEVICE_NAME}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Firmware</span>
+                        <strong>{{FW_VERSION}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>IP Address</span>
+                        <strong>{{IP_ADDRESS}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Signal Strength</span>
+                        <strong>{{WIFI_RSSI}} dBm</strong>
+                    </div>
+
+                </div>
+
+
+                <div class="details-column">
+
+                    <div class="detail-row">
+                        <span>Operating Mode</span>
+                        <strong>{{NETWORK_MODE}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Sensor Status</span>
+                        <strong>{{SENSOR_STATUS}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Battery Status</span>
+                        <strong>{{BATTERY_STATUS}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>MQTT Status</span>
+                        <strong>Not installed</strong>
+                    </div>
+
+                </div>
+
             </div>
-        </div>
 
-        <div class="metric-card">
-            <div class="metric-label">
-                Wasserhöhe
+        </details>
+
+
+        <!-- =================================================
+             Actions
+             ================================================= -->
+
+        <section class="panel actions-panel">
+
+            <h2>Actions</h2>
+
+            <div class="action-grid">
+
+                <form
+                    method="POST"
+                    action="/measure">
+
+                    <button
+                        type="submit"
+                        class="action-button primary-action">
+
+                        <span class="action-icon">
+                            ▶
+                        </span>
+
+                        <span>
+                            <strong>Take Measurement</strong>
+                            <small>Start a new measurement now</small>
+                        </span>
+                    </button>
+                </form>
+
+
+                <form
+                    method="POST"
+                    action="/sleep"
+                    onsubmit="return confirm(
+                        'Put the ESP32 into deep sleep?'
+                    );">
+
+                    <button
+                        type="submit"
+                        class="action-button secondary-action">
+
+                        <span class="action-icon">
+                            ◐
+                        </span>
+
+                        <span>
+                            <strong>Enter Deep Sleep</strong>
+                            <small>
+                                Sleep until the next measurement
+                            </small>
+                        </span>
+                    </button>
+                </form>
+
+
+                <form
+                    method="POST"
+                    action="/restart"
+                    onsubmit="return confirm(
+                        'Restart the ESP32 now?'
+                    );">
+
+                    <button
+                        type="submit"
+                        class="action-button danger-action">
+
+                        <span class="action-icon">
+                            ↻
+                        </span>
+
+                        <span>
+                            <strong>Restart ESP32</strong>
+                            <small>Restart the device</small>
+                        </span>
+                    </button>
+                </form>
+
             </div>
 
-            <div
-                id="waterLevel"
-                class="metric-value">
+        </section>
 
-                {{WATER_LEVEL_CM}} cm
-            </div>
-        </div>
 
-        <div class="metric-card">
-            <div class="metric-label">
-                Sensorabstand
-            </div>
+        <!-- =================================================
+             Settings
+             ================================================= -->
 
-            <div
-                id="distance"
-                class="metric-value">
+        <details
+            class="panel settings-panel"
+            open>
 
-                {{DISTANCE_CM}} cm
-            </div>
-        </div>
+            <summary>
+                <span class="summary-icon">⚙</span>
 
-        <div class="metric-card">
-            <div class="metric-label">
-                Batterie
-            </div>
+                <span>
+                    Settings
 
-            <div
-                id="batteryPercent"
-                class="metric-value">
+                    <small>
+                        Configure your device and connections
+                    </small>
+                </span>
+            </summary>
 
-                {{BATTERY_PERCENT}} %
-            </div>
-
-            <div
-                id="batteryVoltage"
-                class="metric-detail">
-
-                {{BATTERY_VOLTAGE}} V
-            </div>
-        </div>
-
-    </section>
-
-    <section class="card">
-        <h2>Systemstatus</h2>
-
-        <div class="status">
-            Gerätename:
-            {{DEVICE_NAME}}
-            <br>
-
-            Firmware:
-            {{FW_VERSION}}
-            <br>
-
-            IP-Adresse:
-            <span id="ipAddress">
-                {{IP_ADDRESS}}
-            </span>
-            <br>
-
-            WLAN-Signal:
-            <span id="wifiRssi">
-                {{WIFI_RSSI}}
-            </span>
-            dBm
-            <br>
-
-            Betriebsmodus:
-            <span id="networkMode">
-                {{NETWORK_MODE}}
-            </span>
-            <br>
-
-            Sensorstatus:
-            <span id="sensorStatus">
-                {{SENSOR_STATUS}}
-            </span>
-            <br>
-
-            Batteriestatus:
-            <span id="batteryStatus">
-                {{BATTERY_STATUS}}
-            </span>
-            <br>
-
-            MQTT-Status:
-            <span id="mqttStatus">
-                Wird geladen …
-            </span>
-        </div>
-
-        <small id="statusUpdateText">
-            Status wird alle 15 Sekunden aktualisiert.
-        </small>
-    </section>
-
-    <section class="card">
-        <h2>Aktionen</h2>
-
-        <div class="actions">
 
             <form
                 method="POST"
-                action="/measure">
+                action="/save">
 
-                <button type="submit">
-                    Jetzt messen
-                </button>
-            </form>
+                <div class="settings-grid">
 
-            <form
-                method="POST"
-                action="/sleep"
-                onsubmit="return confirm(
-                    'ESP32 jetzt in Deep Sleep versetzen?'
-                );">
+                    <!-- Device settings -->
+
+                    <section class="settings-card">
+
+                        <h3>Device Settings</h3>
+
+                        <label for="deviceName">
+                            Device Name
+                        </label>
+
+                        <input
+                            id="deviceName"
+                            name="deviceName"
+                            type="text"
+                            value="{{DEVICE_NAME}}"
+                            required>
+
+                        <label for="measureInterval">
+                            Measurement Interval
+                        </label>
+
+                        <div class="input-with-unit">
+                            <input
+                                id="measureInterval"
+                                name="measureInterval"
+                                type="number"
+                                min="1"
+                                value="{{MEASURE_INTERVAL}}"
+                                required>
+
+                            <span>seconds</span>
+                        </div>
+
+                        <small class="field-help">
+                            This value is also used as the
+                            deep-sleep interval.
+                        </small>
+
+                    </section>
+
+
+                    <!-- Wi-Fi settings -->
+
+                    <section class="settings-card">
+
+                        <h3>Wi-Fi Settings</h3>
+
+                        <label for="wifiSSID">
+                            Wi-Fi SSID
+                        </label>
+
+                        <input
+                            id="wifiSSID"
+                            name="wifiSSID"
+                            type="text"
+                            value="{{WIFI_SSID}}"
+                            required>
+
+                        <label for="wifiPassword">
+                            Wi-Fi Password
+                        </label>
+
+                        <input
+                            id="wifiPassword"
+                            name="wifiPassword"
+                            type="password"
+                            autocomplete="new-password"
+                            placeholder="Leave empty to keep unchanged">
+
+                        <small class="field-help">
+                            Wi-Fi changes become active after restart.
+                        </small>
+
+                    </section>
+
+
+                    <!-- MQTT settings -->
+
+                    <section class="settings-card">
+
+                        <h3>MQTT Settings</h3>
+
+                        <label class="switch-row">
+
+                            <span>MQTT Enabled</span>
+
+                            <span class="switch-control">
+                                <input
+                                    type="checkbox"
+                                    name="mqttEnabled"
+                                    value="1"
+                                    {{MQTT_CHECKED}}>
+
+                                <span class="switch-slider"></span>
+                            </span>
+
+                        </label>
+
+
+                        <label for="mqttServer">
+                            Broker
+                        </label>
+
+                        <input
+                            id="mqttServer"
+                            name="mqttServer"
+                            type="text"
+                            placeholder="192.168.1.10"
+                            value="{{MQTT_SERVER}}">
+
+
+                        <label for="mqttPort">
+                            Port
+                        </label>
+
+                        <input
+                            id="mqttPort"
+                            name="mqttPort"
+                            type="number"
+                            min="1"
+                            max="65535"
+                            value="{{MQTT_PORT}}">
+
+
+                        <label for="mqttUser">
+                            Username
+                        </label>
+
+                        <input
+                            id="mqttUser"
+                            name="mqttUser"
+                            type="text"
+                            value="{{MQTT_USER}}">
+
+
+                        <label for="mqttPassword">
+                            Password
+                        </label>
+
+                        <input
+                            id="mqttPassword"
+                            name="mqttPassword"
+                            type="password"
+                            autocomplete="new-password"
+                            placeholder="Leave empty to keep unchanged">
+
+                    </section>
+
+
+                    <!-- Tank settings -->
+
+                    <section class="settings-card">
+
+                        <h3>Tank Settings</h3>
+
+                        <label for="tankHeight">
+                            Tank Height
+                        </label>
+
+                        <div class="input-with-unit">
+                            <input
+                                id="tankHeight"
+                                name="tankHeight"
+                                type="number"
+                                min="1"
+                                step="0.1"
+                                value="{{TANK_HEIGHT}}"
+                                required>
+
+                            <span>cm</span>
+                        </div>
+
+
+                        <label for="sensorClearance">
+                            Sensor Clearance
+                        </label>
+
+                        <div class="input-with-unit">
+                            <input
+                                id="sensorClearance"
+                                name="sensorClearance"
+                                type="number"
+                                min="0"
+                                step="0.1"
+                                value="{{SENSOR_CLEARANCE}}"
+                                required>
+
+                            <span>cm</span>
+                        </div>
+
+                        <small class="field-help">
+                            Air gap between the sensor and the
+                            maximum water level.
+                        </small>
+
+                    </section>
+
+                </div>
+
 
                 <button
                     type="submit"
-                    class="secondary-button">
+                    class="save-settings-button">
 
-                    Sleep now
+                    Save All Settings
                 </button>
+
             </form>
 
-        </div>
-    </section>
+        </details>
 
-    <form
-        method="POST"
-        action="/save">
+    </main>
 
-        <section class="card">
-            <h2>Gerät</h2>
 
-            <label for="deviceName">
-                Gerätename
-            </label>
+    <!-- =====================================================
+         Footer
+         ===================================================== -->
 
-            <input
-                id="deviceName"
-                name="deviceName"
-                type="text"
-                value="{{DEVICE_NAME}}"
-                required>
-        </section>
-
-        <section class="card">
-            <h2>WLAN</h2>
-
-            <label for="wifiSSID">
-                WLAN-Name
-            </label>
-
-            <input
-                id="wifiSSID"
-                name="wifiSSID"
-                type="text"
-                value="{{WIFI_SSID}}"
-                required>
-
-            <label for="wifiPassword">
-                WLAN-Passwort
-            </label>
-
-            <input
-                id="wifiPassword"
-                name="wifiPassword"
-                type="password"
-                autocomplete="new-password"
-                placeholder="Unverändert lassen">
-
-            <small>
-                Leer lassen, um das bereits gespeicherte
-                WLAN-Passwort beizubehalten.
-            </small>
-
-            <div class="warning">
-                Änderungen am WLAN-Namen oder WLAN-Passwort
-                werden erst nach einem Neustart aktiv.
-            </div>
-        </section>
-
-        <section class="card">
-            <h2>MQTT</h2>
-
-            <label class="checkbox-row">
-                <input
-                    type="checkbox"
-                    name="mqttEnabled"
-                    value="1"
-                    {{MQTT_CHECKED}}>
-
-                MQTT aktivieren
-            </label>
-
-            <label for="mqttServer">
-                MQTT-Broker
-            </label>
-
-            <input
-                id="mqttServer"
-                name="mqttServer"
-                type="text"
-                placeholder="192.168.1.10"
-                value="{{MQTT_SERVER}}">
-
-            <label for="mqttPort">
-                MQTT-Port
-            </label>
-
-            <input
-                id="mqttPort"
-                name="mqttPort"
-                type="number"
-                min="1"
-                max="65535"
-                value="{{MQTT_PORT}}">
-
-            <label for="mqttUser">
-                MQTT-Benutzername
-            </label>
-
-            <input
-                id="mqttUser"
-                name="mqttUser"
-                type="text"
-                value="{{MQTT_USER}}">
-
-            <label for="mqttPassword">
-                MQTT-Passwort
-            </label>
-
-            <input
-                id="mqttPassword"
-                name="mqttPassword"
-                type="password"
-                autocomplete="new-password"
-                placeholder="Unverändert lassen">
-
-            <small>
-                Leer lassen, um das bereits gespeicherte
-                MQTT-Passwort beizubehalten.
-            </small>
-
-            <div class="warning">
-                MQTT-Einstellungen werden erst nach einem
-                Neustart vollständig übernommen.
-            </div>
-        </section>
-
-        <section class="card">
-            <h2>Tank</h2>
-
-            <label for="tankHeight">
-                Tankhöhe in cm
-            </label>
-
-            <input
-                id="tankHeight"
-                name="tankHeight"
-                type="number"
-                min="1"
-                step="0.1"
-                value="{{TANK_HEIGHT}}"
-                required>
-
-            <label for="measureInterval">
-                Messintervall in Sekunden
-            </label>
-
-            <input
-                id="measureInterval"
-                name="measureInterval"
-                type="number"
-                min="1"
-                value="{{MEASURE_INTERVAL}}"
-                required>
-
-            <small>
-                Nach einer automatischen Messung schläft das
-                Gerät für diesen Zeitraum.
-            </small>
-        </section>
-
-        <button type="submit">
-            Einstellungen speichern
-        </button>
-
-    </form>
-
-    <section
-        class="card"
-        style="margin-top: 18px;">
-
-        <h2>System</h2>
-
-        <p>
-            Starte den ESP32 neu, um geänderte WLAN- und
-            MQTT-Einstellungen zu übernehmen.
-        </p>
-
-        <form
-            method="POST"
-            action="/restart"
-            onsubmit="return confirm(
-                'ESP32 wirklich neu starten?'
-            );">
-
-            <button
-                type="submit"
-                class="restart-button">
-
-                ESP32 neu starten
-            </button>
-        </form>
-    </section>
-
-    <footer class="footer">
-        Water Tank Sensor · Firmware {{FW_VERSION}}
+    <footer class="page-footer">
+        Water Tank Sensor Dashboard · Firmware {{FW_VERSION}}
     </footer>
 
 </div>
 
+
 <script>
-    async function updateStatus()
-    {
-        const updateText =
-            document.getElementById(
-                "statusUpdateText"
+    (function () {
+        const rawLevel = "{{FILL_PERCENT}}";
+        const parsedLevel = Number.parseFloat(rawLevel);
+
+        const safeLevel = Number.isFinite(parsedLevel)
+            ? Math.min(100, Math.max(0, parsedLevel))
+            : 0;
+
+        const gauge = document.getElementById("tankGauge");
+
+        if (gauge) {
+            gauge.style.setProperty(
+                "--tank-level",
+                safeLevel
             );
-
-        try
-        {
-            const response = await fetch(
-                "/status",
-                {
-                    cache: "no-store"
-                }
-            );
-
-            if (!response.ok)
-            {
-                throw new Error(
-                    "HTTP " + response.status
-                );
-            }
-
-            const status =
-                await response.json();
-
-            document.getElementById(
-                "fillPercent"
-            ).textContent =
-                status.fillPercent + " %";
-
-            document.getElementById(
-                "waterLevel"
-            ).textContent =
-                status.waterLevelCm + " cm";
-
-            document.getElementById(
-                "distance"
-            ).textContent =
-                status.distanceCm + " cm";
-
-            document.getElementById(
-                "batteryPercent"
-            ).textContent =
-                status.batteryPercent + " %";
-
-            document.getElementById(
-                "batteryVoltage"
-            ).textContent =
-                status.batteryVoltage + " V";
-
-            document.getElementById(
-                "ipAddress"
-            ).textContent =
-                status.ipAddress;
-
-            document.getElementById(
-                "wifiRssi"
-            ).textContent =
-                status.wifiRssi;
-
-            document.getElementById(
-                "networkMode"
-            ).textContent =
-                status.networkMode;
-
-            document.getElementById(
-                "sensorStatus"
-            ).textContent =
-                status.sensorStatus;
-
-            document.getElementById(
-                "batteryStatus"
-            ).textContent =
-                status.batteryStatus;
-
-            document.getElementById(
-                "mqttStatus"
-            ).textContent =
-                status.mqttStatus;
-
-            const now =
-                new Date();
-
-            updateText.textContent =
-                "Zuletzt aktualisiert: " +
-                now.toLocaleTimeString(
-                    "de-DE"
-                );
         }
-        catch (error)
-        {
-            updateText.textContent =
-                "Status konnte nicht aktualisiert werden.";
+
+        const updated = document.getElementById(
+            "lastUpdated"
+        );
+
+        if (updated) {
+            updated.textContent =
+                new Date().toLocaleTimeString();
         }
-    }
-
-    /*
-     * Erste Aktualisierung nach dem Laden.
-     */
-    updateStatus();
-
-    /*
-     * Danach alle 15 Sekunden nur die
-     * Statuswerte aktualisieren.
-     */
-    setInterval(
-        updateStatus,
-        15000
-    );
+    })();
 </script>
 
 </body>

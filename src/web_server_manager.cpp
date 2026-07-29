@@ -10,7 +10,8 @@
 #include "sensor.h"
 #include "settings.h"
 #include "sleep_manager.h"
-#include "wifi_manager.h"
+#include "wifi_manager.h" 
+#include "version.h"  
 
 #if MQTT_ENABLED
 #include "mqtt_manager.h"
@@ -400,6 +401,15 @@ void WebServerManager::handleStatus()
     json += distance;
     json += "\",";
 
+
+    json += "\"sensorClearanceCm\":\"";
+    json += String(
+        Settings::data.sensorClearance,
+        1
+    );
+    json += "\",";
+
+
     json += "\"batteryPercent\":";
     json += String(
         Battery::getPercentage()
@@ -536,7 +546,9 @@ void WebServerManager::handleSave()
     if (server.hasArg("tankHeight"))
     {
         const float tankHeight =
-            server.arg("tankHeight").toFloat();
+            server.arg(
+                "tankHeight"
+            ).toFloat();
 
         if (tankHeight > 0.0f)
         {
@@ -544,6 +556,27 @@ void WebServerManager::handleSave()
                 tankHeight;
         }
     }
+
+
+    /*
+     * Sensor Clearance:
+     * Luftspalt zwischen Sensor und maximalem
+     * Wasserstand.
+     */
+    if (server.hasArg("sensorClearance"))
+    {
+        const float sensorClearance =
+            server.arg(
+                "sensorClearance"
+            ).toFloat();
+
+        if (sensorClearance >= 0.0f)
+        {
+            Settings::data.sensorClearance =
+                sensorClearance;
+        }
+    }
+
 
     if (server.hasArg("measureInterval"))
     {
@@ -910,12 +943,20 @@ String WebServerManager::processTemplate(
     page.replace(
         "{{TANK_HEIGHT}}",
         String(
-            static_cast<float>(
-                Settings::data.tankHeight
-            ),
+            Settings::data.tankHeight,
             1
         )
     );
+
+
+    page.replace(
+        "{{SENSOR_CLEARANCE}}",
+        String(
+            Settings::data.sensorClearance,
+            1
+        )
+    );
+
 
     page.replace(
         "{{MEASURE_INTERVAL}}",

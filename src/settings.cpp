@@ -2,120 +2,298 @@
 
 #include <Preferences.h>
 
-Preferences preferences;
+#include "config.h"
+#include "logger.h"
+
+
+namespace
+{
+    /*
+     * Namespace innerhalb der ESP32-Preferences.
+     */
+    constexpr const char* PREFERENCES_NAMESPACE =
+        "tank";
+
+    /*
+     * Kurze Schlüssel sparen Speicher in der
+     * Preferences-Datenbank.
+     */
+    constexpr const char* KEY_WIFI_SSID =
+        "ssid";
+
+    constexpr const char* KEY_WIFI_PASSWORD =
+        "pass";
+
+    constexpr const char* KEY_MQTT_SERVER =
+        "mqtt";
+
+    constexpr const char* KEY_MQTT_PORT =
+        "port";
+
+    constexpr const char* KEY_MQTT_USER =
+        "user";
+
+    constexpr const char* KEY_MQTT_PASSWORD =
+        "mpass";
+
+    constexpr const char* KEY_MQTT_ENABLED =
+        "mqttEnabled";
+
+    constexpr const char* KEY_DEVICE_NAME =
+        "device";
+
+    constexpr const char* KEY_TANK_HEIGHT =
+        "tank";
+
+    /*
+     * Neuer Preferences-Schlüssel für den Abstand
+     * zwischen Sensor und maximalem Wasserstand.
+     */
+    constexpr const char* KEY_SENSOR_CLEARANCE =
+        "clearance";
+
+    constexpr const char* KEY_MEASURE_INTERVAL =
+        "interval";
+
+
+    Preferences preferences;
+}
+
 
 SettingsData Settings::data;
 
+
 void Settings::begin()
 {
-    preferences.begin("tank", false);
+    const bool opened = preferences.begin(
+        PREFERENCES_NAMESPACE,
+        false
+    );
+
+    if (!opened)
+    {
+        Logger::error(
+            "Failed to open preferences"
+        );
+
+        return;
+    }
 
     load();
 }
 
+
 void Settings::load()
 {
+    /*
+     * WLAN
+     */
     data.wifiSSID =
-        preferences.getString("ssid", "");
-
-    data.wifiPassword =
-        preferences.getString("pass", "");
-
-    data.mqttServer =
-        preferences.getString("mqtt", "");
-
-    data.mqttPort =
-        preferences.getUShort("port", 1883);
-
-    data.mqttUser =
-        preferences.getString("user", "");
-
-    data.mqttPassword =
-        preferences.getString("mpass", "");
-
-    data.mqttEnabled =
-    preferences.getBool("mqttEnabled", false);
-
-    data.deviceName =
         preferences.getString(
-            "device",
-            "WaterTankSensor"
+            KEY_WIFI_SSID,
+            ""
         );
 
+    data.wifiPassword =
+        preferences.getString(
+            KEY_WIFI_PASSWORD,
+            ""
+        );
+
+
+    /*
+     * MQTT
+     */
+    data.mqttServer =
+        preferences.getString(
+            KEY_MQTT_SERVER,
+            ""
+        );
+
+    data.mqttPort =
+        preferences.getUShort(
+            KEY_MQTT_PORT,
+            1883
+        );
+
+    data.mqttUser =
+        preferences.getString(
+            KEY_MQTT_USER,
+            ""
+        );
+
+    data.mqttPassword =
+        preferences.getString(
+            KEY_MQTT_PASSWORD,
+            ""
+        );
+
+    data.mqttEnabled =
+        preferences.getBool(
+            KEY_MQTT_ENABLED,
+            false
+        );
+
+
+    /*
+     * Gerät
+     */
+    data.deviceName =
+        preferences.getString(
+            KEY_DEVICE_NAME,
+            DEFAULT_HOSTNAME
+        );
+
+
+    /*
+     * Tankhöhe
+     */
     data.tankHeight =
         preferences.getFloat(
-            "tank",
-            100.0f
+            KEY_TANK_HEIGHT,
+            DEFAULT_TANK_HEIGHT_CM
         );
 
     if (data.tankHeight <= 0.0f)
     {
-        data.tankHeight = 100.0f;
+        data.tankHeight =
+            DEFAULT_TANK_HEIGHT_CM;
     }
 
+
+    /*
+     * Abstand zwischen Sensor und maximalem
+     * Wasserstand.
+     */
+    data.sensorClearance =
+    preferences.getFloat(
+        KEY_SENSOR_CLEARANCE,
+        DEFAULT_SENSOR_CLEARANCE_CM
+    );
+
+    if (data.sensorClearance < 0.0f)
+    {
+        data.sensorClearance =
+            DEFAULT_SENSOR_CLEARANCE_CM;
+    }
+
+
+    /*
+     * Mess- und Deep-Sleep-Intervall
+     */
     data.measureInterval =
         preferences.getUShort(
-            "interval",
-            300
+            KEY_MEASURE_INTERVAL,
+            DEFAULT_MEASURE_INTERVAL
         );
+
+    if (data.measureInterval == 0)
+    {
+        data.measureInterval =
+            DEFAULT_MEASURE_INTERVAL;
+    }
+
+
+    Logger::info(
+        "Settings loaded"
+    );
+
+    Logger::info(
+        "Tank height: " +
+        String(data.tankHeight, 1) +
+        " cm"
+    );
+
+    Logger::info(
+        "Sensor clearance: " +
+        String(data.sensorClearance, 1) +
+        " cm"
+    );
 }
+
 
 void Settings::save()
 {
+    /*
+     * WLAN
+     */
     preferences.putString(
-        "ssid",
+        KEY_WIFI_SSID,
         data.wifiSSID
     );
 
     preferences.putString(
-        "pass",
+        KEY_WIFI_PASSWORD,
         data.wifiPassword
     );
 
+
+    /*
+     * MQTT
+     */
     preferences.putString(
-        "mqtt",
+        KEY_MQTT_SERVER,
         data.mqttServer
     );
 
     preferences.putUShort(
-        "port",
+        KEY_MQTT_PORT,
         data.mqttPort
     );
 
     preferences.putString(
-        "user",
+        KEY_MQTT_USER,
         data.mqttUser
     );
 
     preferences.putString(
-        "mpass",
+        KEY_MQTT_PASSWORD,
         data.mqttPassword
     );
 
     preferences.putBool(
-    "mqttEnabled",
-    data.mqttEnabled
-);
+        KEY_MQTT_ENABLED,
+        data.mqttEnabled
+    );
 
+
+    /*
+     * Gerät und Tank
+     */
     preferences.putString(
-        "device",
+        KEY_DEVICE_NAME,
         data.deviceName
     );
 
     preferences.putFloat(
-        "tank",
+        KEY_TANK_HEIGHT,
         data.tankHeight
     );
 
+    preferences.putFloat(
+        KEY_SENSOR_CLEARANCE,
+        data.sensorClearance
+    );
+
     preferences.putUShort(
-        "interval",
+        KEY_MEASURE_INTERVAL,
         data.measureInterval
     );
+
+
+    Logger::info(
+        "Settings saved"
+    );
 }
+
 
 void Settings::reset()
 {
     preferences.clear();
+
+    Logger::warning(
+        "Settings reset"
+    );
 
     load();
 }

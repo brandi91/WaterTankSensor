@@ -9,6 +9,7 @@
 #include "settings.h"
 #include "wifi_manager.h"
 #include "config.h"
+#include "version.h"
 
 namespace
 {
