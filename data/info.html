@@ -4,243 +4,331 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <title>Device Info</title>
+    <title>Device &amp; Wiring</title>
     <link rel="stylesheet" href="/style.css">
-    <style>
-        .info-nav,.info-grid{display:flex;gap:.75rem;flex-wrap:wrap}
-        .info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
-        .info-layout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
-        .info-section{padding:1.25rem}
-        .info-wide{grid-column:1/-1}
-        .info-section h2{margin-top:0}
-        .pin-table{width:100%;border-collapse:collapse}
-        .pin-table th,.pin-table td{padding:.65rem;border-bottom:1px solid rgba(140,160,190,.2);text-align:left}
-        .visual{width:100%;height:auto;display:block}
-        .board{fill:#163d35;stroke:#36c99a;stroke-width:2}
-        .module{fill:#25354b;stroke:#7890ad}.usb{fill:#a8b4c3}
-        .pin{fill:#d9a62e}.wire{fill:none;stroke-width:3}
-        .wire-power{stroke:#ef5350}.wire-ground{stroke:#8d99ae}.wire-signal{stroke:#48a7ff}
-        .svg-label{fill:#dce7f5;font:12px system-ui,sans-serif}
-        .warning-card{border-left:4px solid #ff6262;background:rgba(255,70,70,.1);padding:1rem;border-radius:.5rem}
-        .status-list li{margin:.45rem 0}.custom{color:#65b7ff;font-weight:700}
-        .pin-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
-        .pin-field{display:flex;flex-direction:column;gap:.4rem}
-        .pin-field select{width:100%;padding:.7rem;border:1px solid rgba(140,160,190,.35);border-radius:.5rem;background:#111d2d;color:#dce7f5}
-        .pin-actions{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;margin-top:1rem}
-        @media(max-width:760px){.info-layout,.pin-form-grid{grid-template-columns:1fr}.info-wide{grid-column:auto}.pin-table{font-size:.82rem}.pin-table th,.pin-table td{padding:.4rem}}
-    </style>
 </head>
 <body>
-<div class="page-shell">
-    <header class="page-header">
-        <div>
-            <h1>Device Info</h1>
-            <p>Hardware, wiring and operating reference</p>
+<div class="page-shell info-page">
+    <header class="panel info-hero">
+        <div class="info-hero-copy">
+            <span class="info-eyebrow">ESP32 WATER TANK SENSOR</span>
+            <h1>Device &amp; Wiring</h1>
+            <p>Hardware reference, pin configuration and operating guide.</p>
+            <nav class="info-nav" aria-label="Main navigation">
+                <a class="navigation-button" href="/">Dashboard</a>
+                <a class="navigation-button" href="/logs">History &amp; Logs</a>
+            </nav>
         </div>
-        <nav class="info-nav" aria-label="Main navigation">
-            <a class="navigation-button" href="/">Dashboard</a>
-            <a class="navigation-button" href="/logs">Logs</a>
-        </nav>
+        <div class="info-chips" aria-label="Device summary">
+            <span><small>Board</small>{{BOARD_TYPE}}</span>
+            <span><small>Firmware</small>{{FW_VERSION}}</span>
+            <span><small>Hostname</small>{{WIFI_HOSTNAME}}</span>
+            <span><small>Interval</small>{{MEASURE_INTERVAL_SECONDS}} seconds</span>
+        </div>
     </header>
 
-    <main class="info-layout">
-        <section class="panel info-section">
-            <h2>1. Device Overview</h2>
-            <div class="info-grid">
-                <div class="detail-row"><span>Device name</span><strong>{{DEVICE_NAME}}</strong></div>
-                <div class="detail-row"><span>Firmware</span><strong>{{FW_VERSION}}</strong></div>
-                <div class="detail-row"><span>Board type</span><strong>{{BOARD_TYPE}}</strong></div>
-                <div class="detail-row"><span>Hostname</span><strong>{{WIFI_HOSTNAME}}</strong></div>
-                <div class="detail-row"><span>Measurement interval</span><strong>{{MEASURE_INTERVAL_SECONDS}} seconds</strong></div>
+    <main class="info-content">
+        <section class="info-hardware-layout">
+            <article class="panel info-card hardware-card">
+                <div class="info-heading">
+                    <div>
+                        <span class="info-kicker">Hardware &amp; Wiring</span>
+                        <h2>Live connection map</h2>
+                    </div>
+                    <span class="info-live-badge">Configured GPIOs</span>
+                </div>
+
+                <div class="hardware-diagram-scroll">
+                    <svg class="hardware-diagram" viewBox="0 0 840 455" role="img" aria-labelledby="wiringTitle wiringDesc">
+                        <title id="wiringTitle">ESP32 water tank sensor wiring</title>
+                        <desc id="wiringDesc">Combined board and wiring diagram using currently configured GPIO values.</desc>
+
+                        <g class="hw-device hw-sensor">
+                            <rect x="24" y="55" width="180" height="112" rx="14"/>
+                            <circle cx="78" cy="98" r="25"/><circle cx="150" cy="98" r="25"/>
+                            <text x="114" y="142">ULTRASONIC</text>
+                        </g>
+                        <g class="hw-device hw-button">
+                            <rect x="42" y="288" width="160" height="78" rx="14"/>
+                            <circle cx="82" cy="327" r="18"/>
+                            <text x="112" y="323">RECOVERY</text>
+                            <text x="112" y="342">BUTTON</text>
+                        </g>
+
+                        <g class="hw-board">
+                            <rect x="304" y="38" width="232" height="350" rx="22"/>
+                            <rect class="hw-module" x="345" y="72" width="150" height="108" rx="10"/>
+                            <path class="hw-antenna" d="M365 92h110m-110 16h110m-110 16h110"/>
+                            <text x="420" y="150">ESP32</text>
+                            <rect class="hw-usb" x="377" y="363" width="86" height="39" rx="7"/>
+                            <text x="420" y="386">USB</text>
+                            <path class="hw-header" d="M322 73v270M518 73v270"/>
+                            <text class="hw-board-name" x="420" y="222">DEVKIT V1</text>
+                            <text class="hw-board-note" x="420" y="247">3.3 V LOGIC</text>
+                        </g>
+
+                        <g class="hw-device hw-led">
+                            <rect x="630" y="50" width="182" height="130" rx="14"/>
+                            <circle class="hw-led-red" cx="678" cy="99" r="18"/>
+                            <circle class="hw-led-green" cx="721" cy="99" r="18"/>
+                            <circle class="hw-led-blue" cx="764" cy="99" r="18"/>
+                            <text x="721" y="146">RGB LED</text>
+                        </g>
+                        <g class="hw-device hw-battery">
+                            <rect x="616" y="274" width="205" height="117" rx="14"/>
+                            <text x="718" y="300">BATTERY DIVIDER</text>
+                            <path class="hw-resistor" d="M642 333h24l8-10 12 20 12-20 12 20 8-10h24"/>
+                            <text x="718" y="368">200 kΩ / 200 kΩ</text>
+                        </g>
+
+                        <g class="hw-wire signal">
+                            <path d="M204 112H272V274H304"/>
+                            <path d="M204 137H252V294H304"/>
+                            <path d="M536 112H596V88H630"/>
+                            <path d="M536 132H606V112H630"/>
+                            <path d="M536 152H616V136H630"/>
+                            <path d="M536 314H584V333H616"/>
+                            <path d="M202 327H270V334H304"/>
+                        </g>
+                        <g class="hw-wire power">
+                            <path d="M204 75H268V52H304"/>
+                            <path d="M536 67H604V65H630"/>
+                        </g>
+                        <g class="hw-wire ground">
+                            <path d="M202 350H280V374H304"/>
+                            <path d="M536 350H582V408H717V391"/>
+                            <path d="M536 172H590V164H630"/>
+                        </g>
+
+                        <g class="hw-labels">
+                            <text x="211" y="105">TRIG · GPIO {{SENSOR_TRIGGER_PIN_CURRENT}}</text>
+                            <text x="211" y="131">ECHO · GPIO {{SENSOR_ECHO_PIN_CURRENT}}</text>
+                            <text x="215" y="320">GPIO {{RECOVERY_PIN_CURRENT}}</text>
+                            <text x="540" y="104">R · GPIO {{LED_RED_PIN_CURRENT}}</text>
+                            <text x="540" y="127">G · GPIO {{LED_GREEN_PIN_CURRENT}}</text>
+                            <text x="540" y="150">B · GPIO {{LED_BLUE_PIN_CURRENT}}</text>
+                            <text x="541" y="307">ADC · GPIO {{BATTERY_ADC_PIN_CURRENT}}</text>
+                            <text x="315" y="321">BUTTON {{BUTTON_PIN_CURRENT}}</text>
+                            <text x="542" y="191">STATUS LED · GPIO {{STATUS_LED_PIN_CURRENT}}</text>
+                            <text class="power-label" x="220" y="45">5 V*</text>
+                            <text class="ground-label" x="249" y="369">GND</text>
+                        </g>
+                    </svg>
+                </div>
+
+                <div class="wiring-legend">
+                    <span><i class="legend-signal"></i>Signal</span>
+                    <span><i class="legend-power"></i>Power</span>
+                    <span><i class="legend-ground"></i>Ground</span>
+                    <small>* Use 5 V only when required by the installed ultrasonic sensor; ESP32 logic remains 3.3 V.</small>
+                </div>
+            </article>
+
+            <aside class="panel info-card facts-card">
+                <div class="info-heading">
+                    <div>
+                        <span class="info-kicker">Device Facts</span>
+                        <h2>Current system</h2>
+                    </div>
+                </div>
+                <dl class="facts-list">
+                    <div><dt>Device</dt><dd>{{DEVICE_NAME}}</dd></div>
+                    <div><dt>Firmware</dt><dd>{{FW_VERSION}}</dd></div>
+                    <div><dt>Board</dt><dd>{{BOARD_TYPE}}</dd></div>
+                    <div><dt>Hostname</dt><dd>{{WIFI_HOSTNAME}}</dd></div>
+                    <div><dt>Network</dt><dd><span class="fact-status">{{NETWORK_MODE}}</span></dd></div>
+                    <div><dt>IP address</dt><dd>{{IP_ADDRESS}}</dd></div>
+                    <div><dt>Sensor</dt><dd><span class="fact-status {{SENSOR_STATUS_CLASS}}">{{SENSOR_STATUS}}</span></dd></div>
+                    <div><dt>Battery</dt><dd><span class="fact-status {{BATTERY_STATUS_CLASS}}">{{BATTERY_STATUS}}</span></dd></div>
+                    <div><dt>MQTT</dt><dd><span class="fact-status {{MQTT_STATUS_CLASS}}">{{MQTT_STATUS}}</span></dd></div>
+                </dl>
+            </aside>
+        </section>
+
+        <section class="panel info-card pins-card">
+            <div class="info-heading">
+                <div>
+                    <span class="info-kicker">Pin Configuration</span>
+                    <h2>Hardware assignments</h2>
+                </div>
+                <span class="info-live-badge">ESP32 DevKit V1</span>
             </div>
-            <p>Battery-powered ESP32 water-tank monitor with ultrasonic level measurement, local history, optional MQTT publishing and deep-sleep operation.</p>
-        </section>
-
-        <section class="panel info-section">
-            <h2>Current Device Status</h2>
-            <div class="detail-row"><span>Network</span><strong>{{NETWORK_MODE}}</strong></div>
-            <div class="detail-row"><span>IP address</span><strong>{{IP_ADDRESS}}</strong></div>
-            <div class="detail-row"><span>Sensor</span><strong>{{SENSOR_STATUS}}</strong></div>
-            <div class="detail-row"><span>Battery</span><strong>{{BATTERY_STATUS}}</strong></div>
-            <div class="detail-row"><span>MQTT</span><strong>{{MQTT_STATUS}}</strong></div>
-        </section>
-
-        <section class="panel info-section">
-            <h2>2. ESP32 Board Model</h2>
-            <svg class="visual" viewBox="0 0 760 300" role="img" aria-label="ESP32 DevKit V1 with highlighted project pins">
-                <rect class="board" x="220" y="20" width="320" height="260" rx="18"/>
-                <rect class="usb" x="330" y="264" width="100" height="28" rx="5"/>
-                <text class="svg-label" x="351" y="283">USB</text>
-                <rect class="module" x="285" y="48" width="190" height="105" rx="8"/>
-                <text class="svg-label" x="327" y="103">ESP32 MODULE</text>
-                <g class="pin">
-                    <rect x="232" y="38" width="12" height="222"/><rect x="516" y="38" width="12" height="222"/>
-                </g>
-                <text class="svg-label" x="18" y="55">Recovery: GPIO {{RECOVERY_PIN_CURRENT}}</text>
-                <text class="svg-label" x="18" y="82">Button: GPIO {{BUTTON_PIN_CURRENT}}</text>
-                <text class="svg-label" x="18" y="109">RGB red: GPIO {{LED_RED_PIN_CURRENT}}</text>
-                <text class="svg-label" x="18" y="136">RGB green: GPIO {{LED_GREEN_PIN_CURRENT}}</text>
-                <text class="svg-label" x="18" y="163">RGB blue: GPIO {{LED_BLUE_PIN_CURRENT}}</text>
-                <text class="svg-label" x="555" y="55">Battery ADC: GPIO {{BATTERY_ADC_PIN_CURRENT}}</text>
-                <text class="svg-label" x="555" y="82">Trigger: GPIO {{SENSOR_TRIGGER_PIN_CURRENT}}</text>
-                <text class="svg-label" x="555" y="109">Echo: GPIO {{SENSOR_ECHO_PIN_CURRENT}}</text>
-                <path class="wire wire-signal" d="M205 51H232M205 78H232M205 105H232M205 132H232M205 159H232"/>
-                <path class="wire wire-signal" d="M528 51H550M528 78H550M528 105H550"/>
-            </svg>
-            <p>The project uses an ultrasonic trigger/echo interface. Sensor RX, TX and sensor-power pins are not implemented.</p>
-        </section>
-
-        <section class="panel info-section info-wide">
-            <h2>3. Current Pin Mapping</h2>
-            <div class="table-scroll">
-                <table class="pin-table">
-                    <thead><tr><th>Function</th><th>Current GPIO</th><th>Default GPIO</th><th>Direction</th><th>Notes</th></tr></thead>
-                    <tbody>
-                        <tr><td>Fixed recovery button</td><td>{{RECOVERY_PIN_CURRENT}}</td><td>{{RECOVERY_PIN_DEFAULT}}</td><td>Input</td><td>Fixed, INPUT_PULLUP, active-low</td></tr>
-                        <tr><td>Configurable button</td><td>{{BUTTON_PIN_CURRENT}} {{BUTTON_PIN_BADGE}}</td><td>{{BUTTON_PIN_DEFAULT}}</td><td>Input</td><td>Configured assignment</td></tr>
-                        <tr><td>Status LED</td><td>{{STATUS_LED_PIN_CURRENT}} {{STATUS_LED_PIN_BADGE}}</td><td>{{STATUS_LED_PIN_DEFAULT}}</td><td>Output</td><td>On-board status output</td></tr>
-                        <tr><td>RGB red</td><td>{{LED_RED_PIN_CURRENT}} {{LED_RED_PIN_BADGE}}</td><td>{{LED_RED_PIN_DEFAULT}}</td><td>Output</td><td>PWM channel</td></tr>
-                        <tr><td>RGB green</td><td>{{LED_GREEN_PIN_CURRENT}} {{LED_GREEN_PIN_BADGE}}</td><td>{{LED_GREEN_PIN_DEFAULT}}</td><td>Output</td><td>PWM channel</td></tr>
-                        <tr><td>RGB blue</td><td>{{LED_BLUE_PIN_CURRENT}} {{LED_BLUE_PIN_BADGE}}</td><td>{{LED_BLUE_PIN_DEFAULT}}</td><td>Output</td><td>PWM channel</td></tr>
-                        <tr><td>Battery ADC</td><td>{{BATTERY_ADC_PIN_CURRENT}} {{BATTERY_ADC_PIN_BADGE}}</td><td>{{BATTERY_ADC_PIN_DEFAULT}}</td><td>ADC1 input</td><td>Voltage divider required</td></tr>
-                        <tr><td>Sensor trigger</td><td>{{SENSOR_TRIGGER_PIN_CURRENT}} {{SENSOR_TRIGGER_PIN_BADGE}}</td><td>{{SENSOR_TRIGGER_PIN_DEFAULT}}</td><td>Output</td><td>Ultrasonic trigger</td></tr>
-                        <tr><td>Sensor echo</td><td>{{SENSOR_ECHO_PIN_CURRENT}} {{SENSOR_ECHO_PIN_BADGE}}</td><td>{{SENSOR_ECHO_PIN_DEFAULT}}</td><td>Input</td><td>Must be 3.3 V safe</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <section class="panel info-section info-wide">
-            <h2>4. Wiring / Schematic</h2>
-            <svg class="visual" viewBox="0 0 900 390" role="img" aria-label="Dynamic wiring overview">
-                <rect class="module" x="335" y="70" width="230" height="245" rx="12"/>
-                <text class="svg-label" x="395" y="100">ESP32 DEVKIT V1</text>
-                <rect class="module" x="35" y="45" width="190" height="110" rx="10"/>
-                <text class="svg-label" x="78" y="77">ULTRASONIC SENSOR</text>
-                <text class="svg-label" x="54" y="105">Trigger GPIO {{SENSOR_TRIGGER_PIN_CURRENT}}</text>
-                <text class="svg-label" x="54" y="130">Echo GPIO {{SENSOR_ECHO_PIN_CURRENT}}</text>
-                <rect class="module" x="35" y="205" width="190" height="75" rx="10"/>
-                <text class="svg-label" x="66" y="238">BUTTON → GPIO {{RECOVERY_PIN_CURRENT}}</text>
-                <text class="svg-label" x="87" y="261">to GND</text>
-                <rect class="module" x="675" y="35" width="190" height="110" rx="10"/>
-                <text class="svg-label" x="730" y="66">RGB LED</text>
-                <text class="svg-label" x="694" y="92">R {{LED_RED_PIN_CURRENT}} · G {{LED_GREEN_PIN_CURRENT}} · B {{LED_BLUE_PIN_CURRENT}}</text>
-                <text class="svg-label" x="722" y="118">Common → GND</text>
-                <rect class="module" x="650" y="205" width="230" height="120" rx="10"/>
-                <text class="svg-label" x="687" y="234">BATTERY DIVIDER</text>
-                <text class="svg-label" x="670" y="260">Battery+ → 200 kΩ → ADC {{BATTERY_ADC_PIN_CURRENT}}</text>
-                <text class="svg-label" x="697" y="286">ADC → 200 kΩ → GND</text>
-                <path class="wire wire-signal" d="M225 105H335M225 130H335M565 90H675M565 110H675M565 130H675M565 260H650"/>
-                <path class="wire wire-ground" d="M225 255H300V340H760V325"/>
-                <path class="wire wire-power" d="M130 45V20H450V70M770 35V20H450"/>
-                <text class="svg-label" x="260" y="18">5 V sensor supply where required by the installed sensor</text>
-                <text class="svg-label" x="462" y="337">GND</text>
-                <text class="svg-label" x="470" y="58">3.3 V logic only</text>
-            </svg>
-            <div class="warning-card">Never connect battery voltage or 5 V directly to an ESP32 ADC pin.</div>
-        </section>
-
-        <section class="panel info-section info-wide">
-            <h2>4. Pin Configuration</h2>
             {{PIN_WARNING}}
+
             <form method="POST" action="/save-pins">
-                <div class="pin-form-grid">
-                    <div class="pin-field">
-                        <label for="buttonPin">Button GPIO</label>
-                        <select id="buttonPin" name="buttonPin">{{BUTTON_PIN_OPTIONS}}</select>
-                        <small>INPUT_PULLUP, active-low. GPIO 33 remains fixed for recovery.</small>
-                    </div>
-                    <div class="pin-field">
-                        <label for="statusLedPin">Status LED GPIO</label>
-                        <select id="statusLedPin" name="statusLedPin">{{STATUS_LED_PIN_OPTIONS}}</select>
-                        <small>Requires an output-capable GPIO.</small>
-                    </div>
-                    <div class="pin-field">
-                        <label for="ledRedPin">RGB LED Red GPIO</label>
-                        <select id="ledRedPin" name="ledRedPin">{{LED_RED_PIN_OPTIONS}}</select>
-                    </div>
-                    <div class="pin-field">
-                        <label for="ledGreenPin">RGB LED Green GPIO</label>
-                        <select id="ledGreenPin" name="ledGreenPin">{{LED_GREEN_PIN_OPTIONS}}</select>
-                    </div>
-                    <div class="pin-field">
-                        <label for="ledBluePin">RGB LED Blue GPIO</label>
-                        <select id="ledBluePin" name="ledBluePin">{{LED_BLUE_PIN_OPTIONS}}</select>
-                    </div>
-                    <div class="pin-field">
-                        <label for="batteryAdcPin">Battery ADC GPIO</label>
-                        <select id="batteryAdcPin" name="batteryAdcPin">{{BATTERY_ADC_PIN_OPTIONS}}</select>
-                        <small>ADC1 only; a voltage divider is required.</small>
-                    </div>
-                    <div class="pin-field">
-                        <label for="sensorTriggerPin">Ultrasonic Trigger GPIO</label>
-                        <select id="sensorTriggerPin" name="sensorTriggerPin">{{SENSOR_TRIGGER_PIN_OPTIONS}}</select>
-                    </div>
-                    <div class="pin-field">
-                        <label for="sensorEchoPin">Ultrasonic Echo GPIO</label>
-                        <select id="sensorEchoPin" name="sensorEchoPin">{{SENSOR_ECHO_PIN_OPTIONS}}</select>
-                        <small>Input signal must remain 3.3 V safe.</small>
-                    </div>
+                <div class="pin-groups">
+                    <fieldset class="pin-group">
+                        <legend>Controls</legend>
+                        <div class="pin-card-grid">
+                            <label class="pin-config-card" for="buttonPin">
+                                <span class="pin-icon">BTN</span>
+                                <span class="pin-copy"><strong>Button</strong><small>INPUT_PULLUP, active-low</small></span>
+                                <select id="buttonPin" name="buttonPin">{{BUTTON_PIN_OPTIONS}}</select>
+                                <span class="pin-default">Default: GPIO {{BUTTON_PIN_DEFAULT}} {{BUTTON_PIN_BADGE}}</span>
+                            </label>
+                            <label class="pin-config-card" for="statusLedPin">
+                                <span class="pin-icon">LED</span>
+                                <span class="pin-copy"><strong>Status LED</strong><small>Output-capable GPIO</small></span>
+                                <select id="statusLedPin" name="statusLedPin">{{STATUS_LED_PIN_OPTIONS}}</select>
+                                <span class="pin-default">Default: GPIO {{STATUS_LED_PIN_DEFAULT}} {{STATUS_LED_PIN_BADGE}}</span>
+                            </label>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="pin-group">
+                        <legend>RGB LED</legend>
+                        <div class="pin-card-grid pin-card-grid-three">
+                            <label class="pin-config-card" for="ledRedPin">
+                                <span class="pin-icon pin-icon-red">R</span>
+                                <span class="pin-copy"><strong>Red channel</strong><small>PWM output</small></span>
+                                <select id="ledRedPin" name="ledRedPin">{{LED_RED_PIN_OPTIONS}}</select>
+                                <span class="pin-default">Default: GPIO {{LED_RED_PIN_DEFAULT}} {{LED_RED_PIN_BADGE}}</span>
+                            </label>
+                            <label class="pin-config-card" for="ledGreenPin">
+                                <span class="pin-icon pin-icon-green">G</span>
+                                <span class="pin-copy"><strong>Green channel</strong><small>PWM output</small></span>
+                                <select id="ledGreenPin" name="ledGreenPin">{{LED_GREEN_PIN_OPTIONS}}</select>
+                                <span class="pin-default">Default: GPIO {{LED_GREEN_PIN_DEFAULT}} {{LED_GREEN_PIN_BADGE}}</span>
+                            </label>
+                            <label class="pin-config-card" for="ledBluePin">
+                                <span class="pin-icon pin-icon-blue">B</span>
+                                <span class="pin-copy"><strong>Blue channel</strong><small>PWM output</small></span>
+                                <select id="ledBluePin" name="ledBluePin">{{LED_BLUE_PIN_OPTIONS}}</select>
+                                <span class="pin-default">Default: GPIO {{LED_BLUE_PIN_DEFAULT}} {{LED_BLUE_PIN_BADGE}}</span>
+                            </label>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="pin-group">
+                        <legend>Measurement</legend>
+                        <div class="pin-card-grid pin-card-grid-three">
+                            <label class="pin-config-card" for="batteryAdcPin">
+                                <span class="pin-icon">ADC</span>
+                                <span class="pin-copy"><strong>Battery ADC</strong><small>ADC1 and divider required</small></span>
+                                <select id="batteryAdcPin" name="batteryAdcPin">{{BATTERY_ADC_PIN_OPTIONS}}</select>
+                                <span class="pin-default">Default: GPIO {{BATTERY_ADC_PIN_DEFAULT}} {{BATTERY_ADC_PIN_BADGE}}</span>
+                            </label>
+                            <label class="pin-config-card" for="sensorTriggerPin">
+                                <span class="pin-icon">TX</span>
+                                <span class="pin-copy"><strong>Ultrasonic trigger</strong><small>Output to sensor</small></span>
+                                <select id="sensorTriggerPin" name="sensorTriggerPin">{{SENSOR_TRIGGER_PIN_OPTIONS}}</select>
+                                <span class="pin-default">Default: GPIO {{SENSOR_TRIGGER_PIN_DEFAULT}} {{SENSOR_TRIGGER_PIN_BADGE}}</span>
+                            </label>
+                            <label class="pin-config-card" for="sensorEchoPin">
+                                <span class="pin-icon">RX</span>
+                                <span class="pin-copy"><strong>Ultrasonic echo</strong><small>3.3 V-safe input</small></span>
+                                <select id="sensorEchoPin" name="sensorEchoPin">{{SENSOR_ECHO_PIN_OPTIONS}}</select>
+                                <span class="pin-default">Default: GPIO {{SENSOR_ECHO_PIN_DEFAULT}} {{SENSOR_ECHO_PIN_BADGE}}</span>
+                            </label>
+                        </div>
+                    </fieldset>
+                </div>
+
+                <div class="pin-restart-note">
+                    <strong>Restart required</strong>
+                    Pin changes take effect after restart. GPIO 33 remains the fixed recovery button.
                 </div>
                 <div class="pin-actions">
                     <button class="save-settings-button" type="submit">Save Pin Configuration</button>
-                    <small>Pin changes apply only after restart.</small>
                 </div>
             </form>
-            <form
-                method="POST"
-                action="/restore-default-pins"
-                class="pin-actions"
-                onsubmit="return confirm('Restore all GPIO assignments to their compile-time defaults? A restart will be required.');">
+
+            <form method="POST" action="/restore-default-pins" id="restorePinsForm" class="restore-pins-form">
                 <button class="battery-reset-button" type="submit">Restore Default Pins</button>
             </form>
         </section>
 
-        <section class="panel info-section">
-            <h2>5. Button Behavior</h2>
-            <div class="detail-row"><span>Short press</span><strong>Manual measurement</strong></div>
-            <div class="detail-row"><span>Hold 5 seconds</span><strong>Web interface · blue blink</strong></div>
-            <div class="detail-row"><span>Hold 15 seconds</span><strong>Configuration AP · red blink</strong></div>
-            <div class="detail-row"><span>Hold 30 seconds</span><strong>Factory reset armed · alternating blue/red</strong></div>
-            <div class="detail-row"><span>Release after 30 seconds</span><strong>Factory reset and restart</strong></div>
+        <section class="info-pair">
+            <article class="panel info-card">
+                <div class="info-heading">
+                    <div>
+                        <span class="info-kicker">Button Controls</span>
+                        <h2>Recovery timeline</h2>
+                    </div>
+                </div>
+                <ol class="button-timeline">
+                    <li class="timeline-neutral"><span>Short</span><strong>Take measurement</strong><small>Normal action</small></li>
+                    <li class="timeline-blue"><span>5 s</span><strong>Start web interface</strong><small>Blue LED</small></li>
+                    <li class="timeline-red"><span>15 s</span><strong>Start configuration AP</strong><small>Red LED</small></li>
+                    <li class="timeline-alternate"><span>30 s</span><strong>Factory reset armed</strong><small>Alternating blue/red</small></li>
+                    <li class="timeline-critical"><span>Release</span><strong>Erase and restart</strong><small>Reset occurs on release</small></li>
+                </ol>
+                <p class="info-neutral-note">GPIO 33 is always retained as the fixed recovery button.</p>
+            </article>
+
+            <article class="panel info-card">
+                <div class="info-heading">
+                    <div>
+                        <span class="info-kicker">Startup Self-Test</span>
+                        <h2>Startup checks</h2>
+                    </div>
+                </div>
+                <ul class="startup-checks">
+                    <li><span>✓</span>Settings and pin validation</li>
+                    <li><span>✓</span>LittleFS</li>
+                    <li><span>✓</span>RGB LED initialization</li>
+                    <li><span>✓</span>Sensor initialization</li>
+                    <li><span>✓</span>Battery ADC</li>
+                    <li><span>✓</span>Wi-Fi configuration</li>
+                    <li><span>✓</span>MQTT configuration</li>
+                </ul>
+                <p class="info-neutral-note">Physical wiring continuity, sensor accuracy and resistor values cannot be verified automatically.</p>
+            </article>
         </section>
 
-        <section class="panel info-section">
-            <h2>6. Self-Test</h2>
-            <p><strong>Implemented initialization checks:</strong></p>
-            <ul class="status-list">
-                <li>Settings Preferences open, load and pin validation with safe fallback.</li>
-                <li>LittleFS mount checks for the web server, history and persistent logging.</li>
-                <li>RGB LED startup color sequence when <code>DEBUG_LED_TEST</code> is compiled in.</li>
-                <li>Sensor GPIO initialization and measurement success/failure logging.</li>
-                <li>Battery ADC initialization and voltage validity checks.</li>
-                <li>Wi-Fi connection timeout and configuration validation.</li>
-                <li>MQTT buffer setup, connection and publish-result checks when MQTT is enabled.</li>
-            </ul>
-            <p><strong>Not currently tested:</strong> no comprehensive automated hardware self-test exists; wiring continuity, sensor accuracy, LED electrical operation and battery-divider values require physical verification.</p>
+        <section class="panel info-card cycle-card">
+            <div class="info-heading">
+                <div>
+                    <span class="info-kicker">Operating Cycle</span>
+                    <h2>From wake to deep sleep</h2>
+                </div>
+            </div>
+            <div class="cycle-flow" aria-label="Automatic operating sequence">
+                <span>Wake</span><i>→</i>
+                <span>Connect Wi-Fi</span><i>→</i>
+                <span>Sync time</span><i>→</i>
+                <span>Measure</span><i>→</i>
+                <span>Store history</span><i>→</i>
+                <span>Publish MQTT</span><i>→</i>
+                <span>Deep sleep</span>
+            </div>
+            <div class="cycle-notes">
+                <span>MQTT publishes only when enabled.</span>
+                <span>Discovery is manual from the dashboard.</span>
+                <span>NTP failure never blocks measurement.</span>
+                <span>The web interface is normally inactive during deep sleep.</span>
+            </div>
         </section>
 
-        <section class="panel info-section">
-            <h2>7. Operating Modes</h2>
-            <p><strong>Automatic Mode:</strong> wake, synchronize time when available, measure, save history, publish MQTT when enabled, then deep sleep.</p>
-            <p><strong>Web Mode:</strong> dashboard, settings, logs and this device information page.</p>
-            <p><strong>Configuration AP:</strong> local recovery and network setup without saved Wi-Fi credentials.</p>
-            <p><strong>Factory Reset:</strong> resets user settings and battery learning, and clears history and persistent logs.</p>
-        </section>
-
-        <section class="panel info-section">
-            <h2>8. Important Notes</h2>
-            <ul class="status-list">
-                <li>Pin changes require a restart.</li>
-                <li>GPIO 33 remains fixed for recovery.</li>
-                <li>MQTT Discovery is manual only.</li>
-                <li>The battery ADC requires a voltage divider.</li>
-                <li>The web interface is normally disabled during deep sleep.</li>
-                <li>Factory reset removes saved configuration and history.</li>
-            </ul>
+        <section class="safety-grid" aria-label="Important safety notes">
+            <article class="panel safety-card safety-electrical">
+                <span class="safety-icon">!</span>
+                <div><h2>Electrical safety</h2><p>Battery ADC requires a voltage divider. Never connect battery voltage or 5 V directly to an ESP32 ADC pin.</p></div>
+            </article>
+            <article class="panel safety-card safety-config">
+                <span class="safety-icon">↻</span>
+                <div><h2>Configuration</h2><p>Pin changes require restart. GPIO 33 remains fixed for recovery.</p></div>
+            </article>
+            <article class="panel safety-card safety-reset">
+                <span class="safety-icon">×</span>
+                <div><h2>Factory reset</h2><p>Removes saved settings, clears history and logs, and resets battery learning.</p></div>
+            </article>
         </section>
     </main>
+
     <footer class="page-footer">Water Tank Sensor · Firmware {{FW_VERSION}}</footer>
 </div>
+
+<script>
+    document
+        .getElementById("restorePinsForm")
+        .addEventListener("submit", function (event) {
+            if (!window.confirm(
+                "Restore all GPIO assignments to their compile-time defaults? A restart will be required."
+            )) {
+                event.preventDefault();
+            }
+        });
+</script>
 </body>
 </html>
