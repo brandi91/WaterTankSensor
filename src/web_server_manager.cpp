@@ -270,6 +270,12 @@ void WebServerManager::registerRoutes()
     );
 
     server.on(
+        "/save-pins",
+        HTTP_POST,
+        handleSavePins
+    );
+
+    server.on(
         "/restore-default-pins",
         HTTP_POST,
         handleRestoreDefaultPins
@@ -695,63 +701,15 @@ json += ",";
 
 void WebServerManager::handleSave()
 {
-    SettingsData candidate = Settings::data;
-    const char* pinArguments[] =
+    if (server.hasArg("buttonPin"))
     {
-        "buttonPin", "statusLedPin", "ledRedPin", "ledGreenPin",
-        "ledBluePin", "batteryAdcPin", "sensorTriggerPin", "sensorEchoPin"
-    };
-    uint8_t* candidatePins[] =
-    {
-        &candidate.buttonPin, &candidate.statusLedPin, &candidate.ledRedPin,
-        &candidate.ledGreenPin, &candidate.ledBluePin,
-        &candidate.batteryAdcPin, &candidate.sensorTriggerPin,
-        &candidate.sensorEchoPin
-    };
-
-    for (size_t i = 0; i < sizeof(pinArguments) / sizeof(pinArguments[0]); ++i)
-    {
-        if (!server.hasArg(pinArguments[i]))
-        {
-            server.send(
-                400,
-                "text/plain; charset=utf-8",
-                String("Missing pin field: ") + pinArguments[i]
-            );
-            return;
-        }
-
-        const String value = server.arg(pinArguments[i]);
-        char* end = nullptr;
-        const long pin = strtol(value.c_str(), &end, 10);
-        if (end == value.c_str() || *end != '\0' || pin < 0 || pin > 39)
-        {
-            server.send(
-                400,
-                "text/plain; charset=utf-8",
-                String("Invalid GPIO value for ") + pinArguments[i] + "."
-            );
-            return;
-        }
-        *candidatePins[i] = static_cast<uint8_t>(pin);
-    }
-
-    String pinError;
-    if (!Settings::validatePins(candidate, pinError))
-    {
-        Logger::warning("Pin configuration rejected: " + pinError);
-        server.send(400, "text/plain; charset=utf-8", pinError);
+        server.send(
+            400,
+            "text/plain; charset=utf-8",
+            "Pin settings must be saved from the Device Info page."
+        );
         return;
     }
-
-    Settings::data.buttonPin = candidate.buttonPin;
-    Settings::data.statusLedPin = candidate.statusLedPin;
-    Settings::data.ledRedPin = candidate.ledRedPin;
-    Settings::data.ledGreenPin = candidate.ledGreenPin;
-    Settings::data.ledBluePin = candidate.ledBluePin;
-    Settings::data.batteryAdcPin = candidate.batteryAdcPin;
-    Settings::data.sensorTriggerPin = candidate.sensorTriggerPin;
-    Settings::data.sensorEchoPin = candidate.sensorEchoPin;
 
     if (server.hasArg("deviceName"))
     {
@@ -1139,6 +1097,81 @@ Settings::save();
     );
 }
 
+void WebServerManager::handleSavePins()
+{
+    SettingsData candidate = Settings::data;
+    const char* pinArguments[] =
+    {
+        "buttonPin", "statusLedPin", "ledRedPin", "ledGreenPin",
+        "ledBluePin", "batteryAdcPin", "sensorTriggerPin", "sensorEchoPin"
+    };
+    uint8_t* candidatePins[] =
+    {
+        &candidate.buttonPin, &candidate.statusLedPin, &candidate.ledRedPin,
+        &candidate.ledGreenPin, &candidate.ledBluePin,
+        &candidate.batteryAdcPin, &candidate.sensorTriggerPin,
+        &candidate.sensorEchoPin
+    };
+
+    for (size_t i = 0; i < sizeof(pinArguments) / sizeof(pinArguments[0]); ++i)
+    {
+        if (!server.hasArg(pinArguments[i]))
+        {
+            server.send(
+                400,
+                "text/plain; charset=utf-8",
+                String("Missing pin field: ") + pinArguments[i]
+            );
+            return;
+        }
+
+        const String value = server.arg(pinArguments[i]);
+        char* end = nullptr;
+        const long pin = strtol(value.c_str(), &end, 10);
+        if (end == value.c_str() || *end != '\0' || pin < 0 || pin > 39)
+        {
+            server.send(
+                400,
+                "text/plain; charset=utf-8",
+                String("Invalid GPIO value for ") + pinArguments[i] + "."
+            );
+            return;
+        }
+        *candidatePins[i] = static_cast<uint8_t>(pin);
+    }
+
+    String pinError;
+    if (!Settings::validatePins(candidate, pinError))
+    {
+        Logger::warning("Pin configuration rejected: " + pinError);
+        server.send(400, "text/plain; charset=utf-8", pinError);
+        return;
+    }
+
+    Settings::data.buttonPin = candidate.buttonPin;
+    Settings::data.statusLedPin = candidate.statusLedPin;
+    Settings::data.ledRedPin = candidate.ledRedPin;
+    Settings::data.ledGreenPin = candidate.ledGreenPin;
+    Settings::data.ledBluePin = candidate.ledBluePin;
+    Settings::data.batteryAdcPin = candidate.batteryAdcPin;
+    Settings::data.sensorTriggerPin = candidate.sensorTriggerPin;
+    Settings::data.sensorEchoPin = candidate.sensorEchoPin;
+    Settings::save();
+    Logger::info("Pin configuration saved; restart required");
+
+    server.send(
+        200,
+        "text/html; charset=utf-8",
+        "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
+        "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+        "<link rel=\"stylesheet\" href=\"/style.css\"><title>Pins saved</title>"
+        "</head><body><main class=\"message-page\"><section class=\"message-card\">"
+        "<h1>Pin configuration saved</h1>"
+        "<p>Pin configuration saved. Restart required.</p>"
+        "<a href=\"/info\">Return to Device Info</a></section></main></body></html>"
+    );
+}
+
 void WebServerManager::handleRestoreDefaultPins()
 {
     Settings::restoreDefaultPins();
@@ -1152,8 +1185,8 @@ void WebServerManager::handleRestoreDefaultPins()
         "<link rel=\"stylesheet\" href=\"/style.css\"><title>Pins restored</title>"
         "</head><body><main class=\"message-page\"><section class=\"message-card\">"
         "<h1>Default pin configuration restored</h1>"
-        "<p>Default pin configuration restored. Restart the device to apply the changes.</p>"
-        "<a href=\"/\">Return to dashboard</a></section></main></body></html>"
+        "<p>Default pin configuration restored. Restart required.</p>"
+        "<a href=\"/info\">Return to Device Info</a></section></main></body></html>"
     );
 }
 

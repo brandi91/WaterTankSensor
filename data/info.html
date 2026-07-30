@@ -8,8 +8,10 @@
     <link rel="stylesheet" href="/style.css">
     <style>
         .info-nav,.info-grid{display:flex;gap:.75rem;flex-wrap:wrap}
-        .info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+        .info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+        .info-layout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
         .info-section{padding:1.25rem}
+        .info-wide{grid-column:1/-1}
         .info-section h2{margin-top:0}
         .pin-table{width:100%;border-collapse:collapse}
         .pin-table th,.pin-table td{padding:.65rem;border-bottom:1px solid rgba(140,160,190,.2);text-align:left}
@@ -21,7 +23,11 @@
         .svg-label{fill:#dce7f5;font:12px system-ui,sans-serif}
         .warning-card{border-left:4px solid #ff6262;background:rgba(255,70,70,.1);padding:1rem;border-radius:.5rem}
         .status-list li{margin:.45rem 0}.custom{color:#65b7ff;font-weight:700}
-        @media(max-width:640px){.pin-table{font-size:.82rem}.pin-table th,.pin-table td{padding:.4rem}}
+        .pin-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+        .pin-field{display:flex;flex-direction:column;gap:.4rem}
+        .pin-field select{width:100%;padding:.7rem;border:1px solid rgba(140,160,190,.35);border-radius:.5rem;background:#111d2d;color:#dce7f5}
+        .pin-actions{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;margin-top:1rem}
+        @media(max-width:760px){.info-layout,.pin-form-grid{grid-template-columns:1fr}.info-wide{grid-column:auto}.pin-table{font-size:.82rem}.pin-table th,.pin-table td{padding:.4rem}}
     </style>
 </head>
 <body>
@@ -37,7 +43,7 @@
         </nav>
     </header>
 
-    <main>
+    <main class="info-layout">
         <section class="panel info-section">
             <h2>1. Device Overview</h2>
             <div class="info-grid">
@@ -48,6 +54,15 @@
                 <div class="detail-row"><span>Measurement interval</span><strong>{{MEASURE_INTERVAL_SECONDS}} seconds</strong></div>
             </div>
             <p>Battery-powered ESP32 water-tank monitor with ultrasonic level measurement, local history, optional MQTT publishing and deep-sleep operation.</p>
+        </section>
+
+        <section class="panel info-section">
+            <h2>Current Device Status</h2>
+            <div class="detail-row"><span>Network</span><strong>{{NETWORK_MODE}}</strong></div>
+            <div class="detail-row"><span>IP address</span><strong>{{IP_ADDRESS}}</strong></div>
+            <div class="detail-row"><span>Sensor</span><strong>{{SENSOR_STATUS}}</strong></div>
+            <div class="detail-row"><span>Battery</span><strong>{{BATTERY_STATUS}}</strong></div>
+            <div class="detail-row"><span>MQTT</span><strong>{{MQTT_STATUS}}</strong></div>
         </section>
 
         <section class="panel info-section">
@@ -75,7 +90,7 @@
             <p>The project uses an ultrasonic trigger/echo interface. Sensor RX, TX and sensor-power pins are not implemented.</p>
         </section>
 
-        <section class="panel info-section">
+        <section class="panel info-section info-wide">
             <h2>3. Current Pin Mapping</h2>
             <div class="table-scroll">
                 <table class="pin-table">
@@ -95,7 +110,7 @@
             </div>
         </section>
 
-        <section class="panel info-section">
+        <section class="panel info-section info-wide">
             <h2>4. Wiring / Schematic</h2>
             <svg class="visual" viewBox="0 0 900 390" role="img" aria-label="Dynamic wiring overview">
                 <rect class="module" x="335" y="70" width="230" height="245" rx="12"/>
@@ -125,8 +140,73 @@
             <div class="warning-card">Never connect battery voltage or 5 V directly to an ESP32 ADC pin.</div>
         </section>
 
+        <section class="panel info-section info-wide">
+            <h2>4. Pin Configuration</h2>
+            {{PIN_WARNING}}
+            <form method="POST" action="/save-pins">
+                <div class="pin-form-grid">
+                    <div class="pin-field">
+                        <label for="buttonPin">Button GPIO</label>
+                        <select id="buttonPin" name="buttonPin">{{BUTTON_PIN_OPTIONS}}</select>
+                        <small>INPUT_PULLUP, active-low. GPIO 33 remains fixed for recovery.</small>
+                    </div>
+                    <div class="pin-field">
+                        <label for="statusLedPin">Status LED GPIO</label>
+                        <select id="statusLedPin" name="statusLedPin">{{STATUS_LED_PIN_OPTIONS}}</select>
+                        <small>Requires an output-capable GPIO.</small>
+                    </div>
+                    <div class="pin-field">
+                        <label for="ledRedPin">RGB LED Red GPIO</label>
+                        <select id="ledRedPin" name="ledRedPin">{{LED_RED_PIN_OPTIONS}}</select>
+                    </div>
+                    <div class="pin-field">
+                        <label for="ledGreenPin">RGB LED Green GPIO</label>
+                        <select id="ledGreenPin" name="ledGreenPin">{{LED_GREEN_PIN_OPTIONS}}</select>
+                    </div>
+                    <div class="pin-field">
+                        <label for="ledBluePin">RGB LED Blue GPIO</label>
+                        <select id="ledBluePin" name="ledBluePin">{{LED_BLUE_PIN_OPTIONS}}</select>
+                    </div>
+                    <div class="pin-field">
+                        <label for="batteryAdcPin">Battery ADC GPIO</label>
+                        <select id="batteryAdcPin" name="batteryAdcPin">{{BATTERY_ADC_PIN_OPTIONS}}</select>
+                        <small>ADC1 only; a voltage divider is required.</small>
+                    </div>
+                    <div class="pin-field">
+                        <label for="sensorTriggerPin">Ultrasonic Trigger GPIO</label>
+                        <select id="sensorTriggerPin" name="sensorTriggerPin">{{SENSOR_TRIGGER_PIN_OPTIONS}}</select>
+                    </div>
+                    <div class="pin-field">
+                        <label for="sensorEchoPin">Ultrasonic Echo GPIO</label>
+                        <select id="sensorEchoPin" name="sensorEchoPin">{{SENSOR_ECHO_PIN_OPTIONS}}</select>
+                        <small>Input signal must remain 3.3 V safe.</small>
+                    </div>
+                </div>
+                <div class="pin-actions">
+                    <button class="save-settings-button" type="submit">Save Pin Configuration</button>
+                    <small>Pin changes apply only after restart.</small>
+                </div>
+            </form>
+            <form
+                method="POST"
+                action="/restore-default-pins"
+                class="pin-actions"
+                onsubmit="return confirm('Restore all GPIO assignments to their compile-time defaults? A restart will be required.');">
+                <button class="battery-reset-button" type="submit">Restore Default Pins</button>
+            </form>
+        </section>
+
         <section class="panel info-section">
-            <h2>5. Self-Test</h2>
+            <h2>5. Button Behavior</h2>
+            <div class="detail-row"><span>Short press</span><strong>Manual measurement</strong></div>
+            <div class="detail-row"><span>Hold 5 seconds</span><strong>Web interface · blue blink</strong></div>
+            <div class="detail-row"><span>Hold 15 seconds</span><strong>Configuration AP · red blink</strong></div>
+            <div class="detail-row"><span>Hold 30 seconds</span><strong>Factory reset armed · alternating blue/red</strong></div>
+            <div class="detail-row"><span>Release after 30 seconds</span><strong>Factory reset and restart</strong></div>
+        </section>
+
+        <section class="panel info-section">
+            <h2>6. Self-Test</h2>
             <p><strong>Implemented initialization checks:</strong></p>
             <ul class="status-list">
                 <li>Settings Preferences open, load and pin validation with safe fallback.</li>
@@ -138,15 +218,6 @@
                 <li>MQTT buffer setup, connection and publish-result checks when MQTT is enabled.</li>
             </ul>
             <p><strong>Not currently tested:</strong> no comprehensive automated hardware self-test exists; wiring continuity, sensor accuracy, LED electrical operation and battery-divider values require physical verification.</p>
-        </section>
-
-        <section class="panel info-section">
-            <h2>6. Button Behavior</h2>
-            <div class="detail-row"><span>Short press</span><strong>Manual measurement</strong></div>
-            <div class="detail-row"><span>Hold 5 seconds</span><strong>Web interface · blue blink</strong></div>
-            <div class="detail-row"><span>Hold 15 seconds</span><strong>Configuration AP · red blink</strong></div>
-            <div class="detail-row"><span>Hold 30 seconds</span><strong>Factory reset armed · alternating blue/red</strong></div>
-            <div class="detail-row"><span>Release after 30 seconds</span><strong>Factory reset and restart</strong></div>
         </section>
 
         <section class="panel info-section">

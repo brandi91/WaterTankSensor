@@ -43,6 +43,7 @@ private:
     static void handleHistoryApi();
     static void handleLogsApi();
     static void handleSave();
+    static void handleSavePins();
     static void handleRestoreDefaultPins();
     static void handleMeasure();
     static void handlePublishMqttDiscovery();
