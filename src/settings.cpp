@@ -94,6 +94,185 @@ constexpr const char* KEY_BATTERY_ESTIMATE_TEST_MODE =
     "batteryTest";
 
 Preferences preferences;
+
+void initializeMissingDefaults()
+{
+    if (!preferences.isKey(KEY_WIFI_SSID))
+    {
+        preferences.putString(KEY_WIFI_SSID, "");
+    }
+
+    if (!preferences.isKey(KEY_WIFI_PASSWORD))
+    {
+        preferences.putString(KEY_WIFI_PASSWORD, "");
+    }
+
+    if (!preferences.isKey(KEY_WIFI_DHCP))
+    {
+        preferences.putBool(KEY_WIFI_DHCP, true);
+    }
+
+    if (!preferences.isKey(KEY_WIFI_STATIC_IP))
+    {
+        preferences.putString(KEY_WIFI_STATIC_IP, "");
+    }
+
+    if (!preferences.isKey(KEY_WIFI_GATEWAY))
+    {
+        preferences.putString(KEY_WIFI_GATEWAY, "");
+    }
+
+    if (!preferences.isKey(KEY_WIFI_SUBNET))
+    {
+        preferences.putString(KEY_WIFI_SUBNET, "");
+    }
+
+    if (!preferences.isKey(KEY_WIFI_DNS_1))
+    {
+        preferences.putString(KEY_WIFI_DNS_1, "");
+    }
+
+    if (!preferences.isKey(KEY_WIFI_DNS_2))
+    {
+        preferences.putString(KEY_WIFI_DNS_2, "");
+    }
+
+    if (!preferences.isKey(KEY_MQTT_SERVER))
+    {
+        preferences.putString(KEY_MQTT_SERVER, "");
+    }
+
+    if (!preferences.isKey(KEY_MQTT_PORT))
+    {
+        preferences.putUShort(KEY_MQTT_PORT, 1883);
+    }
+
+    if (!preferences.isKey(KEY_MQTT_USER))
+    {
+        preferences.putString(KEY_MQTT_USER, "");
+    }
+
+    if (!preferences.isKey(KEY_MQTT_PASSWORD))
+    {
+        preferences.putString(KEY_MQTT_PASSWORD, "");
+    }
+
+    if (!preferences.isKey(KEY_MQTT_ENABLED))
+    {
+        preferences.putBool(KEY_MQTT_ENABLED, false);
+    }
+
+    if (!preferences.isKey(KEY_DEVICE_NAME))
+    {
+        preferences.putString(
+            KEY_DEVICE_NAME,
+            DEFAULT_HOSTNAME
+        );
+    }
+
+    if (!preferences.isKey(KEY_TANK_HEIGHT))
+    {
+        preferences.putFloat(
+            KEY_TANK_HEIGHT,
+            DEFAULT_TANK_HEIGHT_CM
+        );
+    }
+
+    if (!preferences.isKey(KEY_SENSOR_CLEARANCE))
+    {
+        preferences.putFloat(
+            KEY_SENSOR_CLEARANCE,
+            DEFAULT_SENSOR_CLEARANCE_CM
+        );
+    }
+
+    if (!preferences.isKey(KEY_MEASURE_INTERVAL))
+    {
+        preferences.putULong(
+            KEY_MEASURE_INTERVAL,
+            DEFAULT_MEASURE_INTERVAL
+        );
+    }
+
+    if (!preferences.isKey(KEY_NTP_ENABLED))
+    {
+        preferences.putBool(KEY_NTP_ENABLED, true);
+    }
+
+    if (!preferences.isKey(KEY_TIME_ZONE))
+    {
+        preferences.putString(KEY_TIME_ZONE, "UTC0");
+    }
+
+    if (!preferences.isKey(KEY_NTP_SERVER_1))
+    {
+        preferences.putString(
+            KEY_NTP_SERVER_1,
+            "pool.ntp.org"
+        );
+    }
+
+    if (!preferences.isKey(KEY_NTP_SERVER_2))
+    {
+        preferences.putString(
+            KEY_NTP_SERVER_2,
+            "time.nist.gov"
+        );
+    }
+
+    if (!preferences.isKey(KEY_NTP_SERVER_3))
+    {
+        preferences.putString(
+            KEY_NTP_SERVER_3,
+            "time.google.com"
+        );
+    }
+
+    if (!preferences.isKey(KEY_NTP_TIMEOUT))
+    {
+        preferences.putUChar(KEY_NTP_TIMEOUT, 8);
+    }
+
+    if (!preferences.isKey(KEY_BATTERY_EMPTY))
+    {
+        preferences.putFloat(KEY_BATTERY_EMPTY, 3.20f);
+    }
+
+    if (!preferences.isKey(KEY_BATTERY_FULL))
+    {
+        preferences.putFloat(KEY_BATTERY_FULL, 4.20f);
+    }
+
+    if (!preferences.isKey(KEY_BATTERY_CAPACITY))
+    {
+        preferences.putULong(KEY_BATTERY_CAPACITY, 2000UL);
+    }
+
+    if (!preferences.isKey(KEY_BATTERY_CHEMISTRY))
+    {
+        preferences.putString(
+            KEY_BATTERY_CHEMISTRY,
+            "custom"
+        );
+    }
+
+    if (!preferences.isKey(KEY_BATTERY_CELLS))
+    {
+        preferences.putUChar(KEY_BATTERY_CELLS, 1);
+    }
+
+    if (
+        !preferences.isKey(
+            KEY_BATTERY_ESTIMATE_TEST_MODE
+        )
+    )
+    {
+        preferences.putBool(
+            KEY_BATTERY_ESTIMATE_TEST_MODE,
+            false
+        );
+    }
+}
 }
 
 
@@ -122,6 +301,8 @@ void Settings::begin()
 
 void Settings::load()
 {
+    initializeMissingDefaults();
+
     /*
      * WLAN
      */

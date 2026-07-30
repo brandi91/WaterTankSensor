@@ -141,28 +141,36 @@ void BatteryEstimator::begin()
 void BatteryEstimator::load()
 {
     sampleCount =
-        preferences.getULong(
-            KEY_SAMPLE_COUNT,
-            0UL
-        );
+        preferences.isKey(KEY_SAMPLE_COUNT)
+            ? preferences.getULong(
+                KEY_SAMPLE_COUNT,
+                0UL
+              )
+            : 0UL;
 
     learningSeconds =
-        preferences.getULong(
-            KEY_LEARNING_SECONDS,
-            0UL
-        );
+        preferences.isKey(KEY_LEARNING_SECONDS)
+            ? preferences.getULong(
+                KEY_LEARNING_SECONDS,
+                0UL
+              )
+            : 0UL;
 
     startVoltage =
-        preferences.getFloat(
-            KEY_START_VOLTAGE,
-            0.0f
-        );
+        preferences.isKey(KEY_START_VOLTAGE)
+            ? preferences.getFloat(
+                KEY_START_VOLTAGE,
+                0.0f
+              )
+            : 0.0f;
 
     lastVoltage =
-        preferences.getFloat(
-            KEY_LAST_VOLTAGE,
-            0.0f
-        );
+        preferences.isKey(KEY_LAST_VOLTAGE)
+            ? preferences.getFloat(
+                KEY_LAST_VOLTAGE,
+                0.0f
+              )
+            : 0.0f;
 
     estimatedDays = -1.0f;
     ready = false;

@@ -39,10 +39,16 @@ void TimeManager::begin()
 
     if (preferences.begin(PREF_NAMESPACE, false))
     {
-        lastSuccessfulSync =
-            static_cast<time_t>(
-                preferences.getULong64(KEY_LAST_SYNC, 0)
-            );
+        if (preferences.isKey(KEY_LAST_SYNC))
+        {
+            lastSuccessfulSync =
+                static_cast<time_t>(
+                    preferences.getULong64(
+                        KEY_LAST_SYNC,
+                        0
+                    )
+                );
+        }
     }
 
     if (
