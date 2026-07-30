@@ -4,6 +4,8 @@
 
 #include "config.h"
 #include "logger.h"
+#include "settings.h"
+#include "core_logic.h"
 
 /*
  * Spannungsteiler:
@@ -29,18 +31,13 @@ namespace
 
     constexpr uint8_t BATTERY_SAMPLE_COUNT = 32;
 
-    constexpr unsigned long BATTERY_READ_INTERVAL_MS =
-        1000UL;
-
     float voltage = 0.0f;
-
-    unsigned long lastReadAt = 0;
 }
 
 void Battery::begin()
 {
     pinMode(
-        PIN_BATTERY,
+        Settings::activePins().batteryAdcPin,
         INPUT
     );
 
@@ -50,16 +47,15 @@ void Battery::begin()
      * Spannungsteiler ungefähr 2,1 V am GPIO an.
      */
     analogSetPinAttenuation(
-        PIN_BATTERY,
+        Settings::activePins().batteryAdcPin,
         ADC_11db
     );
 
     voltage = readVoltage();
-    lastReadAt = millis();
 
     Logger::info(
         "Battery Manager initialized on GPIO " +
-        String(PIN_BATTERY)
+        String(Settings::activePins().batteryAdcPin)
     );
 
     Logger::info(
@@ -71,17 +67,6 @@ void Battery::begin()
 
 void Battery::loop()
 {
-    const unsigned long now = millis();
-
-    if (
-        now - lastReadAt <
-        BATTERY_READ_INTERVAL_MS
-    )
-    {
-        return;
-    }
-
-    lastReadAt = now;
     voltage = readVoltage();
 }
 
@@ -101,7 +86,7 @@ float Battery::readVoltage()
     {
         millivoltSum +=
             analogReadMilliVolts(
-                PIN_BATTERY
+                Settings::activePins().batteryAdcPin
             );
 
         delay(2);
@@ -130,55 +115,33 @@ float Battery::getVoltage()
 
 int Battery::getPercentage()
 {
-    /*
-     * Einfache lineare Anzeige für den ersten Test.
-     * Später können wir eine realistischere
-     * Li-Ion-Kennlinie verwenden.
-     */
-    constexpr float BATTERY_EMPTY_VOLTAGE =
-        3.20f;
-
-    constexpr float BATTERY_FULL_VOLTAGE =
-        4.20f;
-
-    if (
-        voltage >= BATTERY_FULL_VOLTAGE
-    )
-    {
-        return 100;
-    }
-
-    if (
-        voltage <= BATTERY_EMPTY_VOLTAGE
-    )
-    {
-        return 0;
-    }
-
-    const float percentage =
-        (
-            voltage -
-            BATTERY_EMPTY_VOLTAGE
-        ) /
-        (
-            BATTERY_FULL_VOLTAGE -
-            BATTERY_EMPTY_VOLTAGE
-        ) *
-        100.0f;
-
-    return static_cast<int>(
-        percentage + 0.5f
+    return CoreLogic::calculateBatteryPercentage(
+        voltage,
+        Settings::data.batteryEmptyVoltage,
+        Settings::data.batteryFullVoltage
     );
+}
+
+bool Battery::isValid()
+{
+    return
+        isfinite(voltage) &&
+        voltage > 0.1f &&
+        Settings::data.batteryEmptyVoltage > 0.0f &&
+        Settings::data.batteryFullVoltage >
+            Settings::data.batteryEmptyVoltage;
 }
 
 bool Battery::isLow()
 {
-    return voltage < 3.50f;
+    const int percentage = getPercentage();
+    return percentage >= 0 && percentage < 20;
 }
 
 bool Battery::isCritical()
 {
-    return voltage < 3.30f;
+    const int percentage = getPercentage();
+    return percentage >= 0 && percentage < 5;
 }
 
 bool Battery::isCharging()
@@ -189,4 +152,14 @@ bool Battery::isCharging()
      * erkennen, ob geladen wird.
      */
     return false;
+}
+
+const char* Battery::getPowerSourceText()
+{
+    /*
+     * The current hardware has no VBUS sense input,
+     * charger status signal or other reliable way to
+     * distinguish USB power from battery power.
+     */
+    return "Unknown";
 }

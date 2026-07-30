@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
 
@@ -11,7 +11,7 @@
         http-equiv="refresh"
         content="15; url=/">
 
-    <title>Konfiguration gespeichert</title>
+    <title>Configuration Saved</title>
 
     <link rel="stylesheet" href="/style.css">
 </head>
@@ -20,29 +20,31 @@
 <div class="container">
 
     <section class="card">
-        <h1>Konfiguration gespeichert</h1>
+        <h1>Configuration Saved</h1>
 
         <div class="success">
-            Die Einstellungen wurden dauerhaft gespeichert.
+            The settings were saved successfully.
+            Network configuration saved. Restart required.
+            Access point configuration saved. Restart required.
         </div>
 
         <div class="warning">
-            Änderungen am WLAN oder an MQTT werden erst nach
-            einem Neustart vollständig aktiv.
+            Wi-Fi and MQTT changes become fully active after
+            a restart.
         </div>
 
         <p>
-            Du wirst in 15 Sekunden automatisch zur Hauptseite
-            zurückgeleitet.
+            You will return to the dashboard automatically
+            in 15 seconds.
         </p>
 
         <div class="countdown">
-            <span id="seconds">15</span> Sekunden
+            <span id="seconds">15</span> seconds
         </div>
 
         <div class="actions" style="margin-top: 22px;">
             <a href="/" class="secondary-button">
-                Jetzt zur Hauptseite
+                Return to Dashboard
             </a>
         </div>
     </section>

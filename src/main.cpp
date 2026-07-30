@@ -4,11 +4,15 @@
 #include "battery_estimator.h"
 #include "button.h"
 #include "config.h"
+#include "core_logic.h"
+#include "factory_reset.h"
 #include "led.h"
 #include "logger.h"
+#include "measurement_history.h"
 #include "sensor.h"
 #include "settings.h"
 #include "sleep_manager.h"
+#include "time_manager.h"
 #include "version.h"
 #include "web_server_manager.h"
 #include "wifi_manager.h"
@@ -28,7 +32,8 @@ enum class WebIndicatorMode
 {
     Off,
     WebServer,
-    ConfigPortal
+    ConfigPortal,
+    FactoryResetArmed
 };
 
 
@@ -39,7 +44,11 @@ bool webIndicatorLedState = false;
 
 unsigned long lastWebIndicatorToggle = 0;
 unsigned long webIndicatorStartedAt = 0;
-unsigned long lastBatteryLog = 0;
+bool timeSyncAttempted = false;
+unsigned long lastAutomaticMeasurementAt = 0;
+bool awakeServicesInitialized = false;
+bool awakeSchedulingActive = false;
+bool lastDeepSleepEnabled = true;
 
 
 /*
@@ -68,6 +77,8 @@ void updateWebIndicator()
      * trotzdem weiter.
      */
     if (
+        webIndicatorMode !=
+            WebIndicatorMode::FactoryResetArmed &&
         now - webIndicatorStartedAt >=
         WEB_LED_INDICATOR_DURATION_MS
     )
@@ -86,10 +97,12 @@ void updateWebIndicator()
         return;
     }
 
-    if (
-        now - lastWebIndicatorToggle <
-        WEB_LED_BLINK_INTERVAL_MS
-    )
+    const unsigned long indicatorInterval =
+        webIndicatorMode == WebIndicatorMode::FactoryResetArmed
+            ? FACTORY_RESET_LED_INTERVAL_MS
+            : WEB_LED_BLINK_INTERVAL_MS;
+
+    if (now - lastWebIndicatorToggle < indicatorInterval)
     {
         return;
     }
@@ -98,6 +111,19 @@ void updateWebIndicator()
 
     webIndicatorLedState =
         !webIndicatorLedState;
+
+    if (webIndicatorMode == WebIndicatorMode::FactoryResetArmed)
+    {
+        if (webIndicatorLedState)
+        {
+            Led::setColor(0, 0, 255);
+        }
+        else
+        {
+            Led::setColor(255, 0, 0);
+        }
+        return;
+    }
 
     if (!webIndicatorLedState)
     {
@@ -124,6 +150,7 @@ void updateWebIndicator()
             break;
 
         case WebIndicatorMode::Off:
+        case WebIndicatorMode::FactoryResetArmed:
         default:
             Led::off();
             break;
@@ -239,6 +266,19 @@ bool performMeasurement(
      */
     Battery::loop();
 
+    Logger::info(
+        "Battery: " +
+        String(
+            Battery::getVoltage(),
+            2
+        ) +
+        " V (" +
+        String(
+            Battery::getPercentage()
+        ) +
+        "%)"
+    );
+
     const bool measurementSuccessful =
         Sensor::measure();
 
@@ -264,6 +304,22 @@ bool performMeasurement(
     Logger::info(
         "Tank measurement successful"
     );
+
+    const bool historyStored =
+        MeasurementHistory::addCurrentMeasurement();
+
+    if (historyStored)
+    {
+        Logger::info(
+            "Measurement history entry stored"
+        );
+    }
+    else
+    {
+        Logger::warning(
+            "Measurement history entry was not stored"
+        );
+    }
 
     BatteryEstimator::addSample(
         Battery::getVoltage(),
@@ -384,15 +440,31 @@ void transmitMeasurement()
  */
 void enterNormalDeepSleep()
 {
-    WebServerManager::stop();
+    if (
+        !CoreLogic::shouldEnterDeepSleep(
+            Settings::data.deepSleepEnabled,
+            false,
+            WebServerManager::isConfigPortalActive(),
+            SleepManager::getRuntimeMode()
+        )
+    )
+    {
+        lastAutomaticMeasurementAt = millis();
+        awakeSchedulingActive = true;
+        Logger::info(
+            "Automatic deep sleep disabled; remaining awake"
+        );
 
+        if (!awakeServicesInitialized)
+        {
+            WebServerManager::begin();
 #if MQTT_ENABLED
-    MqttManager::disconnect();
+            MqttManager::begin();
 #endif
-
-    WifiManager::disconnect();
-
-    Led::off();
+            awakeServicesInitialized = true;
+        }
+        return;
+    }
 
     const uint32_t sleepSeconds =
         static_cast<uint32_t>(
@@ -427,10 +499,29 @@ void runAutomaticCycle(
     /*
      * WLAN arbeitet parallel zur Sensormessung.
      */
-#if MQTT_ENABLED
-    WifiManager::begin();
-    WifiManager::connect();
-#endif
+    bool wifiReady = false;
+
+    if (
+        Settings::data.ntpEnabled ||
+        MQTT_ENABLED
+    )
+    {
+        WifiManager::begin();
+        WifiManager::connect();
+
+        wifiReady =
+            waitForWifi(
+                WIFI_CONNECT_TIMEOUT_MS
+            );
+
+        if (
+            wifiReady &&
+            Settings::data.ntpEnabled
+        )
+        {
+            TimeManager::syncFromNtp();
+        }
+    }
 
     const bool measurementSuccessful =
         performMeasurement(
@@ -440,11 +531,7 @@ void runAutomaticCycle(
 #if MQTT_ENABLED
     if (measurementSuccessful)
     {
-        if (
-            waitForWifi(
-                WIFI_CONNECT_TIMEOUT_MS
-            )
-        )
+        if (wifiReady)
         {
             MqttManager::begin();
 
@@ -489,6 +576,7 @@ void runAutomaticCycle(
 void setup()
 {
     Logger::begin();
+    MeasurementHistory::begin();
     SleepManager::begin();
 
     Logger::info(
@@ -512,6 +600,9 @@ void setup()
     );
 
     Settings::begin();
+    lastDeepSleepEnabled =
+        Settings::data.deepSleepEnabled;
+    TimeManager::begin();
 
     Battery::begin();
     BatteryEstimator::begin();
@@ -519,6 +610,33 @@ void setup()
     Led::begin();
     Button::begin();
     Sensor::begin();
+
+    if (FactoryReset::shouldStartConfigPortal())
+    {
+        Logger::warning(
+            "Factory reset recovery boot: starting configuration access point"
+        );
+
+        WifiManager::begin();
+        WebServerManager::beginConfigPortal();
+
+        if (WebServerManager::isConfigPortalActive())
+        {
+            FactoryReset::clearConfigPortalRequest();
+            startConfigPortalIndicator();
+            Logger::info(
+                "Factory reset complete; configuration portal active"
+            );
+        }
+        else
+        {
+            Logger::error(
+                "Configuration portal failed; recovery request retained"
+            );
+        }
+
+        return;
+    }
 
     const WakeupReason wakeupReason =
         SleepManager::getWakeupReason();
@@ -552,6 +670,15 @@ void setup()
             Settings::data.measureInterval
         ) +
         " s"
+    );
+
+    Logger::info(
+        "Deep Sleep       : " +
+        String(
+            Settings::data.deepSleepEnabled
+                ? "enabled"
+                : "disabled"
+        )
     );
 
 
@@ -654,6 +781,8 @@ void setup()
         "System ready"
     );
 
+    lastAutomaticMeasurementAt = millis();
+
     Logger::info(
         "================================="
     );
@@ -668,10 +797,24 @@ void setup()
 
 void loop()
 {
+    if (!SleepManager::canStartNormalWork())
+    {
+        delay(5);
+        return;
+    }
+
     Button::loop();
-    Battery::loop();
     Sensor::loop();
     WifiManager::loop();
+
+    if (
+        !timeSyncAttempted &&
+        WifiManager::isConnected()
+    )
+    {
+        timeSyncAttempted = true;
+        TimeManager::syncFromNtp();
+    }
 
     if (WebServerManager::isRunning())
     {
@@ -789,6 +932,27 @@ void loop()
             break;
         }
 
+        case ButtonEvent::FactoryResetArmed:
+        {
+            webIndicatorMode =
+                WebIndicatorMode::FactoryResetArmed;
+            webIndicatorLedState = false;
+            webIndicatorStartedAt = millis();
+            lastWebIndicatorToggle =
+                millis() - FACTORY_RESET_LED_INTERVAL_MS;
+
+            Logger::warning(
+                "Factory reset armed - release GPIO 33 to erase data"
+            );
+            break;
+        }
+
+        case ButtonEvent::FactoryResetConfirmed:
+        {
+            FactoryReset::execute();
+            break;
+        }
+
 
         case ButtonEvent::None:
         default:
@@ -804,25 +968,45 @@ void loop()
     const unsigned long now =
         millis();
 
+    /*
+     * Awake-mode scheduling deliberately uses the last automatic
+     * measurement as its baseline. Manual web/button measurements do not
+     * postpone the configured periodic cycle.
+     */
+    const unsigned long intervalMs =
+        static_cast<unsigned long>(
+            Settings::data.measureInterval
+        ) * 1000UL;
     if (
-        now - lastBatteryLog >=
-        5000UL
+        Settings::data.deepSleepEnabled !=
+        lastDeepSleepEnabled
     )
     {
-        lastBatteryLog = now;
-
-        Logger::info(
-            "Battery: " +
-            String(
-                Battery::getVoltage(),
-                2
-            ) +
-            " V (" +
-            String(
-                Battery::getPercentage()
-            ) +
-            "%)"
+        lastDeepSleepEnabled =
+            Settings::data.deepSleepEnabled;
+        lastAutomaticMeasurementAt = now;
+    }
+    if (!Settings::data.deepSleepEnabled)
+    {
+        awakeSchedulingActive = true;
+    }
+    if (
+        awakeSchedulingActive &&
+        !WebServerManager::isConfigPortalActive() &&
+        CoreLogic::isMeasurementDue(
+            now,
+            lastAutomaticMeasurementAt,
+            intervalMs
+        )
+    )
+    {
+        lastAutomaticMeasurementAt = now;
+        performMeasurement(
+            static_cast<uint32_t>(
+                Settings::data.measureInterval
+            )
         );
+        enterNormalDeepSleep();
     }
 
     delay(5);

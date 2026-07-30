@@ -1,4 +1,5 @@
 #include "battery_estimator.h"
+#include "sleep_manager.h"
 
 #include <Preferences.h>
 
@@ -38,10 +39,6 @@ namespace
      * Unterhalb dieser Spannung betrachten wir
      * den Akku für die Schätzung als leer.
      */
-    constexpr float BATTERY_EMPTY_VOLTAGE =
-        3.20f;
-
-
     /*
      * Steigt die Spannung plötzlich um mindestens
      * 0,15 V, gehen wir von Laden oder Akkuwechsel aus.
@@ -145,28 +142,36 @@ void BatteryEstimator::begin()
 void BatteryEstimator::load()
 {
     sampleCount =
-        preferences.getULong(
-            KEY_SAMPLE_COUNT,
-            0UL
-        );
+        preferences.isKey(KEY_SAMPLE_COUNT)
+            ? preferences.getULong(
+                KEY_SAMPLE_COUNT,
+                0UL
+              )
+            : 0UL;
 
     learningSeconds =
-        preferences.getULong(
-            KEY_LEARNING_SECONDS,
-            0UL
-        );
+        preferences.isKey(KEY_LEARNING_SECONDS)
+            ? preferences.getULong(
+                KEY_LEARNING_SECONDS,
+                0UL
+              )
+            : 0UL;
 
     startVoltage =
-        preferences.getFloat(
-            KEY_START_VOLTAGE,
-            0.0f
-        );
+        preferences.isKey(KEY_START_VOLTAGE)
+            ? preferences.getFloat(
+                KEY_START_VOLTAGE,
+                0.0f
+              )
+            : 0.0f;
 
     lastVoltage =
-        preferences.getFloat(
-            KEY_LAST_VOLTAGE,
-            0.0f
-        );
+        preferences.isKey(KEY_LAST_VOLTAGE)
+            ? preferences.getFloat(
+                KEY_LAST_VOLTAGE,
+                0.0f
+              )
+            : 0.0f;
 
     estimatedDays = -1.0f;
     ready = false;
@@ -217,6 +222,11 @@ void BatteryEstimator::addSample(
     uint32_t elapsedSeconds
 )
 {
+    if (!SleepManager::canStartNormalWork())
+    {
+        return;
+    }
+
     if (!initialized)
     {
         begin();
@@ -226,8 +236,8 @@ void BatteryEstimator::addSample(
      * Ungültige Werte nicht übernehmen.
      */
     if (
-        voltage < 2.0f ||
-        voltage > 5.0f
+        !isfinite(voltage) ||
+        voltage <= 0.0f
     )
     {
         Logger::warning(
@@ -380,7 +390,7 @@ void BatteryEstimator::updateEstimate(
 
     const float remainingVoltage =
         currentVoltage -
-        BATTERY_EMPTY_VOLTAGE;
+        Settings::data.batteryEmptyVoltage;
 
     if (remainingVoltage <= 0.0f)
     {

@@ -3,6 +3,8 @@
 #include "config.h"
 #include "logger.h"
 #include "settings.h"
+#include "core_logic.h"
+#include "sleep_manager.h"
 
 
 float Sensor::distanceCm = 0.0f;
@@ -11,12 +13,20 @@ float Sensor::waterLevelCm = 0.0f;
 int Sensor::percentage = 0;
 
 bool Sensor::valid = false;
+bool Sensor::measurementAttempted = false;
 
 
 void Sensor::begin()
 {
+    pinMode(Settings::activePins().sensorTriggerPin, OUTPUT);
+    digitalWrite(Settings::activePins().sensorTriggerPin, LOW);
+    pinMode(Settings::activePins().sensorEchoPin, INPUT);
+
     Logger::info(
-        "Sensor Manager initialized"
+        "Sensor Manager initialized on trigger GPIO " +
+        String(Settings::activePins().sensorTriggerPin) +
+        " and echo GPIO " +
+        String(Settings::activePins().sensorEchoPin)
     );
 }
 
@@ -32,6 +42,13 @@ void Sensor::loop()
 
 bool Sensor::measure()
 {
+    if (!SleepManager::canStartNormalWork())
+    {
+        return false;
+    }
+
+    measurementAttempted = true;
+
     const float measuredDistance =
         readDistance();
 
@@ -48,16 +65,21 @@ bool Sensor::measure()
 
     distanceCm = measuredDistance;
 
-    waterLevelCm =
-        calculateWaterLevel(
-            distanceCm
+    const CoreLogic::TankReading reading =
+        CoreLogic::calculateTankReading(
+            distanceCm,
+            Settings::data.tankHeight,
+            Settings::data.sensorClearance
         );
+    if (!reading.valid)
+    {
+        valid = false;
+        Logger::error("Invalid tank measurement configuration");
+        return false;
+    }
 
-    percentage =
-        calculatePercentage(
-            waterLevelCm
-        );
-
+    waterLevelCm = reading.waterLevelCm;
+    percentage = reading.fillPercent;
     valid = true;
 
 
@@ -99,103 +121,6 @@ float Sensor::readDistance()
 }
 
 
-float Sensor::calculateWaterLevel(
-    float measuredDistanceCm
-)
-{
-    const float tankHeight =
-        Settings::data.tankHeight;
-
-    const float sensorClearance =
-        Settings::data.sensorClearance;
-
-
-    if (tankHeight <= 0.0f)
-    {
-        Logger::error(
-            "Invalid tank height"
-        );
-
-        return 0.0f;
-    }
-
-
-    /*
-     * Gemessen wird vom Sensor bis zur
-     * Wasseroberfläche.
-     *
-     * Gesamtabstand Sensor → Tankboden:
-     *
-     * Tankhöhe + Sensor Clearance
-     *
-     * Daraus folgt:
-     *
-     * Wasserhöhe =
-     * Tankhöhe
-     * + Sensor Clearance
-     * - gemessener Abstand
-     */
-    float level =
-        tankHeight +
-        sensorClearance -
-        measuredDistanceCm;
-
-
-    /*
-     * Ergebnis auf den physikalisch sinnvollen
-     * Tankbereich begrenzen.
-     */
-    if (level < 0.0f)
-    {
-        level = 0.0f;
-    }
-
-    if (level > tankHeight)
-    {
-        level = tankHeight;
-    }
-
-    return level;
-}
-
-
-int Sensor::calculatePercentage(
-    float measuredWaterLevelCm
-)
-{
-    const float tankHeight =
-        Settings::data.tankHeight;
-
-    if (tankHeight <= 0.0f)
-    {
-        return 0;
-    }
-
-
-    int result =
-        static_cast<int>(
-            (
-                measuredWaterLevelCm /
-                tankHeight
-            ) *
-            100.0f
-        );
-
-
-    if (result < 0)
-    {
-        result = 0;
-    }
-
-    if (result > 100)
-    {
-        result = 100;
-    }
-
-    return result;
-}
-
-
 float Sensor::getDistanceCm()
 {
     return distanceCm;
@@ -217,4 +142,14 @@ int Sensor::getPercentage()
 bool Sensor::isValid()
 {
     return valid;
+}
+
+bool Sensor::hasMeasurementAttempted()
+{
+    return measurementAttempted;
+}
+
+bool Sensor::isSimulated()
+{
+    return true;
 }

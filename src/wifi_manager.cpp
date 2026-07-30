@@ -1,4 +1,5 @@
 #include "wifi_manager.h"
+#include "sleep_manager.h"
 
 #include <WiFi.h>
 #include <ESPmDNS.h>
@@ -14,6 +15,11 @@ unsigned long WifiManager::lastReconnectAttempt = 0;
 bool WifiManager::networkConfigurationValid = false;
 bool WifiManager::mdnsRunning = false;
 String WifiManager::hostname;
+String WifiManager::lastDhcpIp;
+String WifiManager::lastDhcpGateway;
+String WifiManager::lastDhcpSubnet;
+String WifiManager::lastDhcpDns1;
+String WifiManager::lastDhcpDns2;
 
 void WifiManager::begin()
 {
@@ -48,6 +54,11 @@ void WifiManager::begin()
 
 bool WifiManager::connect()
 {
+    if (!SleepManager::canStartNormalWork())
+    {
+        return false;
+    }
+
     if (Settings::data.wifiSSID.isEmpty())
     {
         Logger::warning("Wi-Fi SSID is empty");
@@ -93,6 +104,11 @@ void WifiManager::startConnection()
 
 void WifiManager::loop()
 {
+    if (!SleepManager::canStartNormalWork())
+    {
+        return;
+    }
+
     const unsigned long now = millis();
 
     if (WiFi.isConnected())
@@ -115,6 +131,7 @@ void WifiManager::loop()
             );
 
             startMdns();
+            captureDhcpConfiguration();
         }
 
         return;
@@ -253,6 +270,26 @@ int32_t WifiManager::getRssi()
     return WiFi.RSSI();
 }
 
+String WifiManager::getLastDhcpIp() { return lastDhcpIp; }
+String WifiManager::getLastDhcpGateway() { return lastDhcpGateway; }
+String WifiManager::getLastDhcpSubnet() { return lastDhcpSubnet; }
+String WifiManager::getLastDhcpDns1() { return lastDhcpDns1; }
+String WifiManager::getLastDhcpDns2() { return lastDhcpDns2; }
+
+void WifiManager::captureDhcpConfiguration()
+{
+    if (!Settings::data.wifiDhcp || !WiFi.isConnected())
+    {
+        return;
+    }
+
+    lastDhcpIp = WiFi.localIP().toString();
+    lastDhcpGateway = WiFi.gatewayIP().toString();
+    lastDhcpSubnet = WiFi.subnetMask().toString();
+    lastDhcpDns1 = WiFi.dnsIP(0).toString();
+    lastDhcpDns2 = WiFi.dnsIP(1).toString();
+}
+
 bool WifiManager::configureNetwork()
 {
     if (Settings::data.wifiDhcp)
@@ -279,22 +316,35 @@ bool WifiManager::configureNetwork()
         ) &&
         subnet.fromString(
             Settings::data.wifiSubnet
-        ) &&
-        dns1.fromString(
-            Settings::data.wifiDns1
-        ) &&
-        dns2.fromString(
-            Settings::data.wifiDns2
         );
 
     if (!addressesValid)
     {
         Logger::error(
             "Invalid static Wi-Fi configuration: "
-            "IP, gateway, subnet, DNS 1 and DNS 2 "
-            "must all be valid IPv4 addresses"
+            "IP, gateway and subnet must be valid IPv4 addresses"
         );
 
+        return false;
+    }
+
+    String primaryDns = Settings::data.wifiDns1;
+    String secondaryDns = Settings::data.wifiDns2;
+    if (primaryDns.isEmpty() && !secondaryDns.isEmpty())
+    {
+        primaryDns = secondaryDns;
+        secondaryDns = "";
+    }
+    if (primaryDns.isEmpty())
+    {
+        primaryDns = Settings::data.wifiGateway;
+    }
+    if (
+        !dns1.fromString(primaryDns) ||
+        (!secondaryDns.isEmpty() && !dns2.fromString(secondaryDns))
+    )
+    {
+        Logger::error("Invalid non-empty DNS address");
         return false;
     }
 

@@ -34,23 +34,32 @@
          Header
          ===================================================== -->
 
-    <header class="page-header">
-        <div>
-            <h1>Water Tank Sensor</h1>
-            <p>Overview &amp; Device Status</p>
-        </div>
-
-        <div class="header-badge">
-            Firmware {{FW_VERSION}}
-        </div>
+    <header class="site-header">
+        <a class="site-identity" href="/" aria-label="Water Tank Sensor dashboard">
+            <strong>{{DEVICE_NAME}}</strong>
+            <small>ESP32 Tank Monitor</small>
+        </a>
+        <nav class="top-navigation" aria-label="Main navigation">
+            <a class="nav-link active" href="/" aria-current="page">Dashboard</a>
+            <a class="nav-link" href="/logs">History &amp; Logs</a>
+            <a class="nav-link" href="/info">Device Info</a>
+            {{LOGOUT_CONTROL}}
+        </nav>
     </header>
 
+    <section class="page-header">
+        <div>
+            <h1>Dashboard</h1>
+            <p class="page-subtitle">Current tank, battery and connectivity status.</p>
+        </div>
+        <div class="header-badge">Firmware {{FW_VERSION}}</div>
+    </section>
 
     <!-- =====================================================
          Main dashboard
          ===================================================== -->
 
-    <main>
+    <main class="page-content">
 
         <section class="overview-grid">
 
@@ -83,8 +92,20 @@
                         <span></span>
                     </div>
 
-                    <div class="last-update">
-                        Last updated:
+                    <div class="last-update dashboard-time">
+                        Current time:
+                        <strong id="currentDeviceTime">
+                            {{CURRENT_DEVICE_TIME}}
+                        </strong>
+                        <span>
+                            Time source:
+                            <strong id="currentTimeSource">
+                                {{TIME_SOURCE}}
+                            </strong>
+                        </span>
+                        <span>
+                            Last updated:
+                        </span>
                         <strong id="lastUpdated">
                             just now
                         </strong>
@@ -192,7 +213,7 @@
                 </div>
 
                 <div class="battery-percentage">
-                    {{BATTERY_PERCENT}}<span>%</span>
+                    {{BATTERY_PERCENT_DISPLAY}}
                 </div>
 
                 <div class="battery-voltage">
@@ -236,26 +257,32 @@
 
             <div class="quick-status-grid">
 
-                <div class="quick-status-item">
-                    <span class="status-circle status-ok">
-                        ✓
-                    </span>
+                <div
+                    class="quick-status-item {{SENSOR_STATUS_CLASS}}"
+                    id="sensorQuickStatus">
+
+                    <span class="status-circle"></span>
 
                     <div>
                         <span>Sensor</span>
-                        <strong>{{SENSOR_STATUS}}</strong>
+                        <strong id="sensorStatusText">
+                            {{SENSOR_STATUS}}
+                        </strong>
                     </div>
                 </div>
 
 
-                <div class="quick-status-item">
-                    <span class="status-circle status-ok">
-                        ✓
-                    </span>
+                <div
+                    class="quick-status-item {{BATTERY_STATUS_CLASS}}"
+                    id="batteryQuickStatus">
+
+                    <span class="status-circle"></span>
 
                     <div>
                         <span>Battery</span>
-                        <strong>{{BATTERY_STATUS}}</strong>
+                        <strong id="batteryStatusText">
+                            {{BATTERY_STATUS}}
+                        </strong>
                     </div>
                 </div>
 
@@ -272,14 +299,31 @@
                 </div>
 
 
-                <div class="quick-status-item">
+                <div
+                    class="quick-status-item {{MQTT_STATUS_CLASS}}"
+                    id="mqttQuickStatus">
+
                     <span class="status-symbol">
                         ▣
                     </span>
 
                     <div>
                         <span>MQTT</span>
-                        <strong>Not installed</strong>
+                        <strong id="mqttStatusText">
+                            {{MQTT_STATUS}}
+                        </strong>
+                    </div>
+                </div>
+
+
+                <div class="quick-status-item status-neutral">
+                    <span class="status-symbol">
+                        ⏻
+                    </span>
+
+                    <div>
+                        <span>Power Source</span>
+                        <strong>{{POWER_SOURCE}}</strong>
                     </div>
                 </div>
 
@@ -301,7 +345,9 @@
 
             <div class="details-content">
 
-                <div class="details-column">
+                <section class="details-group">
+
+                    <h3>Device Details</h3>
 
                     <div class="detail-row">
                         <span>Device Name</span>
@@ -311,6 +357,63 @@
                     <div class="detail-row">
                         <span>Firmware</span>
                         <strong>{{FW_VERSION}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Sensor Status</span>
+                        <strong>{{SENSOR_STATUS}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Battery Status</span>
+                        <strong>{{BATTERY_STATUS}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Battery Percentage</span>
+                        <strong>{{BATTERY_PERCENT_DISPLAY}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Battery Voltage</span>
+                        <strong>{{BATTERY_VOLTAGE}} V</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Power Source</span>
+                        <strong>{{POWER_SOURCE}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Current Device Time</span>
+                        <strong>{{CURRENT_DEVICE_TIME}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Time Source</span>
+                        <strong>{{TIME_SOURCE}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Last Measurement</span>
+                        <strong>{{LAST_MEASUREMENT}}</strong>
+                    </div>
+
+                </section>
+
+
+                <section class="details-group">
+
+                    <h3>Network</h3>
+
+                    <div class="detail-row">
+                        <span>Wi-Fi Mode</span>
+                        <strong>{{NETWORK_MODE}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>SSID</span>
+                        <strong>{{CURRENT_WIFI_SSID}}</strong>
                     </div>
 
                     <div class="detail-row">
@@ -329,8 +432,18 @@
                     </div>
 
                     <div class="detail-row">
-                        <span>DNS 1</span>
+                        <span>DNS</span>
                         <strong>{{CURRENT_DNS_1}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Hostname</span>
+                        <strong>{{WIFI_HOSTNAME}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>mDNS Name</span>
+                        <strong>{{MDNS_NAME}}</strong>
                     </div>
 
                     <div class="detail-row">
@@ -338,47 +451,34 @@
                         <strong>{{WIFI_RSSI}} dBm</strong>
                     </div>
 
-                </div>
+                </section>
 
 
-                <div class="details-column">
+                <section class="details-group">
+
+                    <h3>MQTT Status</h3>
 
                     <div class="detail-row">
-                        <span>Operating Mode</span>
-                        <strong>{{NETWORK_MODE}}</strong>
+                        <span>MQTT</span>
+                        <strong>{{MQTT_ENABLED_STATUS}}</strong>
                     </div>
 
                     <div class="detail-row">
-                        <span>DNS 2</span>
-                        <strong>{{CURRENT_DNS_2}}</strong>
+                        <span>Connection</span>
+                        <strong>{{MQTT_STATUS}}</strong>
                     </div>
 
                     <div class="detail-row">
-                        <span>Wi-Fi Hostname</span>
-                        <strong>{{WIFI_HOSTNAME}}</strong>
+                        <span>Broker</span>
+                        <strong>{{MQTT_SERVER}}:{{MQTT_PORT}}</strong>
                     </div>
 
                     <div class="detail-row">
-                        <span>mDNS Address</span>
-                        <strong>{{MDNS_NAME}}</strong>
+                        <span>Discovery</span>
+                        <strong>{{MQTT_DISCOVERY_STATUS}}</strong>
                     </div>
 
-                    <div class="detail-row">
-                        <span>Sensor Status</span>
-                        <strong>{{SENSOR_STATUS}}</strong>
-                    </div>
-
-                    <div class="detail-row">
-                        <span>Battery Status</span>
-                        <strong>{{BATTERY_STATUS}}</strong>
-                    </div>
-
-                    <div class="detail-row">
-                        <span>MQTT Status</span>
-                        <strong>Not installed</strong>
-                    </div>
-
-                </div>
+                </section>
 
             </div>
 
@@ -418,9 +518,7 @@
                 <form
                     method="POST"
                     action="/sleep"
-                    onsubmit="return confirm(
-                        'Put the ESP32 into deep sleep?'
-                    );">
+                    data-confirm="Put the ESP32 into deep sleep?">
 
                     <button
                         type="submit"
@@ -464,9 +562,7 @@
                 <form
                     method="POST"
                     action="/restart"
-                    onsubmit="return confirm(
-                        'Restart the ESP32 now?'
-                    );">
+                    data-confirm="Restart the ESP32 now?">
 
                     <button
                         type="submit"
@@ -515,50 +611,95 @@
 
                 <div class="settings-grid">
 
-                    <!-- Device settings -->
+                    <section class="settings-card settings-device-tank">
 
-                    <section class="settings-card">
+                        <h3>Device &amp; Tank</h3>
 
-                        <h3>Device Settings</h3>
+                        <div class="settings-subsection">
+                            <h4>Device</h4>
 
-                        <label for="deviceName">
-                            Device Name
-                        </label>
-
-                        <input
-                            id="deviceName"
-                            name="deviceName"
-                            type="text"
-                            value="{{DEVICE_NAME}}"
-                            required>
-
-                        <label for="measureInterval">
-                            Measurement Interval
-                        </label>
-
-                        <div class="input-with-unit">
+                            <label for="deviceName">Device Name</label>
                             <input
-                                id="measureInterval"
-                                name="measureInterval"
-                                type="number"
-                                min="1"
-                                value="{{MEASURE_INTERVAL}}"
+                                id="deviceName"
+                                name="deviceName"
+                                type="text"
+                                value="{{DEVICE_NAME}}"
                                 required>
 
-                            <span>seconds</span>
+                            <label for="measureInterval">Measurement Interval</label>
+                            <div class="input-with-unit">
+                                <input
+                                    id="measureInterval"
+                                    name="measureInterval"
+                                    type="number"
+                                    min="1"
+                                    value="{{MEASURE_INTERVAL}}"
+                                    required>
+                                <select
+                                    id="measureIntervalUnit"
+                                    name="measureIntervalUnit"
+                                    aria-label="Measurement interval unit">
+                                    <option value="seconds" {{INTERVAL_SECONDS_SELECTED}}>seconds</option>
+                                    <option value="minutes" {{INTERVAL_MINUTES_SELECTED}}>minutes</option>
+                                    <option value="hours" {{INTERVAL_HOURS_SELECTED}}>hours</option>
+                                </select>
+                            </div>
+                            <small class="field-help">
+                                This value is also used as the deep-sleep interval.
+                            </small>
+
+                            <label class="switch-row">
+                                <span>Enable Deep Sleep</span>
+                                <span class="switch-control">
+                                    <input
+                                        id="deepSleepEnabled"
+                                        name="deepSleepEnabled"
+                                        type="checkbox"
+                                        {{DEEP_SLEEP_ENABLED_CHECKED}}>
+                                    <span class="switch-slider"></span>
+                                </span>
+                            </label>
+                            <small class="field-help">
+                                When disabled, the device remains awake between measurements.
+                            </small>
                         </div>
 
-                        <small class="field-help">
-                            This value is also used as the
-                            deep-sleep interval.
-                        </small>
+                        <div class="settings-subsection">
+                            <h4>Tank</h4>
+
+                            <label for="tankHeight">Tank Height</label>
+                            <div class="input-with-unit">
+                                <input
+                                    id="tankHeight"
+                                    name="tankHeight"
+                                    type="number"
+                                    min="1"
+                                    step="0.1"
+                                    value="{{TANK_HEIGHT}}"
+                                    required>
+                                <span>cm</span>
+                            </div>
+
+                            <label for="sensorClearance">Sensor Clearance</label>
+                            <div class="input-with-unit">
+                                <input
+                                    id="sensorClearance"
+                                    name="sensorClearance"
+                                    type="number"
+                                    min="0"
+                                    step="0.1"
+                                    value="{{SENSOR_CLEARANCE}}"
+                                    required>
+                                <span>cm</span>
+                            </div>
+                            <small class="field-help">
+                                Air gap between the sensor and the maximum water level.
+                            </small>
+                        </div>
 
                     </section>
 
-
-                    <!-- Wi-Fi settings -->
-
-                    <section class="settings-card">
+                    <section class="settings-card settings-wifi settings-wide">
 
                         <h3>Wi-Fi Settings</h3>
 
@@ -588,93 +729,105 @@
                             Wi-Fi changes become active after restart.
                         </small>
 
-                        <label class="switch-row">
+                        <label for="networkMode">Network Mode</label>
+                        <select id="networkMode" name="networkMode">
+                            <option value="dhcp" {{NETWORK_MODE_DHCP_SELECTED}}>DHCP (Automatic)</option>
+                            <option value="manual" {{NETWORK_MODE_MANUAL_SELECTED}}>Manual (Static)</option>
+                        </select>
 
-                            <span>Use DHCP</span>
+                        <div
+                            id="dhcpConfiguration"
+                            class="network-mode-panel"
+                            data-ip="{{LAST_DHCP_IP}}"
+                            data-gateway="{{LAST_DHCP_GATEWAY}}"
+                            data-subnet="{{LAST_DHCP_SUBNET}}"
+                            data-dns1="{{LAST_DHCP_DNS_1}}"
+                            data-dns2="{{LAST_DHCP_DNS_2}}">
+                            <strong>Current DHCP Configuration</strong>
+                            <dl class="network-value-list">
+                                <div><dt>IP address</dt><dd>{{LAST_DHCP_IP}}</dd></div>
+                                <div><dt>Gateway</dt><dd>{{LAST_DHCP_GATEWAY}}</dd></div>
+                                <div><dt>Subnet mask</dt><dd>{{LAST_DHCP_SUBNET}}</dd></div>
+                                <div><dt>DNS 1</dt><dd>{{LAST_DHCP_DNS_1}}</dd></div>
+                                <div><dt>DNS 2</dt><dd>{{LAST_DHCP_DNS_2}}</dd></div>
+                            </dl>
+                        </div>
 
-                            <span class="switch-control">
-                                <input
-                                    type="checkbox"
-                                    name="wifiDhcp"
-                                    value="1"
-                                    {{WIFI_DHCP_CHECKED}}>
+                        <div id="manualNetworkFields" class="manual-network-fields">
+                            <button id="useDhcpValues" class="secondary-inline-button" type="button">
+                                Use Current DHCP Values
+                            </button>
 
-                                <span class="switch-slider"></span>
-                            </span>
+                            <label for="wifiStaticIp">Static IP</label>
+                            <input id="wifiStaticIp" name="wifiStaticIp" type="text"
+                                inputmode="decimal" placeholder="192.168.1.50"
+                                value="{{WIFI_STATIC_IP}}">
 
-                        </label>
+                            <label for="wifiGateway">Gateway</label>
+                            <input id="wifiGateway" name="wifiGateway" type="text"
+                                inputmode="decimal" placeholder="192.168.1.1"
+                                value="{{WIFI_GATEWAY}}">
 
-                        <label for="wifiStaticIp">
-                            Static IP
-                        </label>
+                            <label for="wifiSubnet">Subnet Mask</label>
+                            <input id="wifiSubnet" name="wifiSubnet" type="text"
+                                inputmode="decimal" placeholder="255.255.255.0"
+                                value="{{WIFI_SUBNET}}">
 
-                        <input
-                            id="wifiStaticIp"
-                            name="wifiStaticIp"
-                            type="text"
-                            inputmode="decimal"
-                            placeholder="192.168.1.50"
-                            value="{{WIFI_STATIC_IP}}">
+                            <label for="wifiDns1">DNS 1 (optional)</label>
+                            <input id="wifiDns1" name="wifiDns1" type="text"
+                                inputmode="decimal" placeholder="192.168.1.1"
+                                value="{{WIFI_DNS_1}}">
 
-                        <label for="wifiGateway">
-                            Gateway
-                        </label>
-
-                        <input
-                            id="wifiGateway"
-                            name="wifiGateway"
-                            type="text"
-                            inputmode="decimal"
-                            placeholder="192.168.1.1"
-                            value="{{WIFI_GATEWAY}}">
-
-                        <label for="wifiSubnet">
-                            Subnet Mask
-                        </label>
-
-                        <input
-                            id="wifiSubnet"
-                            name="wifiSubnet"
-                            type="text"
-                            inputmode="decimal"
-                            placeholder="255.255.255.0"
-                            value="{{WIFI_SUBNET}}">
-
-                        <label for="wifiDns1">
-                            DNS 1
-                        </label>
-
-                        <input
-                            id="wifiDns1"
-                            name="wifiDns1"
-                            type="text"
-                            inputmode="decimal"
-                            placeholder="192.168.1.1"
-                            value="{{WIFI_DNS_1}}">
-
-                        <label for="wifiDns2">
-                            DNS 2
-                        </label>
-
-                        <input
-                            id="wifiDns2"
-                            name="wifiDns2"
-                            type="text"
-                            inputmode="decimal"
-                            placeholder="1.1.1.1"
-                            value="{{WIFI_DNS_2}}">
-
-                        <small class="field-help">
-                            When DHCP is disabled, all five IPv4
-                            fields must be valid.
-                        </small>
+                            <label for="wifiDns2">DNS 2 (optional)</label>
+                            <input id="wifiDns2" name="wifiDns2" type="text"
+                                inputmode="decimal" placeholder="1.1.1.1"
+                                value="{{WIFI_DNS_2}}">
+                        </div>
 
                     </section>
 
+                    <section class="settings-card settings-access-point">
+                        <h3>Access Point Configuration</h3>
 
-                    <!-- MQTT settings -->
+                        <label for="apSsid">AP Name / SSID</label>
+                        <input id="apSsid" name="apSsid" type="text"
+                            maxlength="32" value="{{AP_SSID}}" required>
 
-                    <section class="settings-card">
+                        <label for="apPassword">AP Password</label>
+                        <input id="apPassword" name="apPassword" type="password"
+                            minlength="8" maxlength="63" autocomplete="new-password"
+                            placeholder="Leave blank to keep unchanged">
+                        <small class="field-help">Leave blank to keep the current password.</small>
+                        <label class="switch-row">
+                            <span>Create open access point</span>
+                            <span class="switch-control">
+                                <input id="apOpen" name="apOpen" type="checkbox" value="1">
+                                <span class="switch-slider"></span>
+                            </span>
+                        </label>
+                        <div id="openApWarning" class="open-ap-warning" hidden>
+                            Open access point: anyone nearby can connect.
+                        </div>
+
+                        <label for="apIp">AP IP Address</label>
+                        <input id="apIp" name="apIp" type="text"
+                            inputmode="decimal" value="{{AP_IP}}" required>
+
+                        <label for="apGateway">AP Gateway</label>
+                        <input id="apGateway" name="apGateway" type="text"
+                            inputmode="decimal" value="{{AP_GATEWAY}}"
+                            placeholder="Defaults to AP IP">
+
+                        <label for="apSubnet">AP Subnet Mask</label>
+                        <input id="apSubnet" name="apSubnet" type="text"
+                            inputmode="decimal" value="{{AP_SUBNET}}" required>
+
+                        <small class="field-help">
+                            Access point changes take effect after restart.
+                        </small>
+                    </section>
+
+                    <section class="settings-card settings-mqtt">
 
                         <h3>MQTT Settings</h3>
 
@@ -744,101 +897,196 @@
 
                     </section>
 
-
-                    <!-- Tank settings -->
-
-                    <section class="settings-card">
-
-                        <h3>Tank Settings</h3>
-
-                        <label for="tankHeight">
-                            Tank Height
-                        </label>
-
-                        <div class="input-with-unit">
-                            <input
-                                id="tankHeight"
-                                name="tankHeight"
-                                type="number"
-                                min="1"
-                                step="0.1"
-                                value="{{TANK_HEIGHT}}"
-                                required>
-
-                            <span>cm</span>
-                        </div>
-
-
-                        <label for="sensorClearance">
-                            Sensor Clearance
-                        </label>
-
-                        <div class="input-with-unit">
-                            <input
-                                id="sensorClearance"
-                                name="sensorClearance"
-                                type="number"
-                                min="0"
-                                step="0.1"
-                                value="{{SENSOR_CLEARANCE}}"
-                                required>
-
-                            <span>cm</span>
-                        </div>
-
-<small class="field-help">
-    Air gap between the sensor and the
-    maximum water level.
-</small>
-
-</section>
-
-
-<!-- Battery estimate settings -->
-
-<section class="settings-card">
-
-    <h3>Battery Estimate</h3>
+<section class="settings-card settings-time">
+    <h3>Time &amp; NTP</h3>
 
     <label class="switch-row">
-
-        <span>Test Mode</span>
-
+        <span>Enable NTP</span>
         <span class="switch-control">
             <input
                 type="checkbox"
-                name="batteryEstimateTestMode"
+                name="ntpEnabled"
                 value="1"
-                {{BATTERY_TEST_MODE_CHECKED}}>
-
+                {{NTP_ENABLED_CHECKED}}>
             <span class="switch-slider"></span>
         </span>
-
     </label>
 
-    <small class="field-help">
-        Test mode needs at least 5 samples
-        and 2 minutes.
-    </small>
+    <label for="timeZone">Time Zone</label>
+    <input
+        id="timeZone"
+        name="timeZone"
+        type="text"
+        value="{{TIME_ZONE}}"
+        placeholder="UTC0">
 
-    <small class="field-help">
-        Normal mode needs at least 30 samples
-        and 24 hours.
-    </small>
+    <label for="ntpServer1">NTP Server 1</label>
+    <input id="ntpServer1" name="ntpServer1" type="text" value="{{NTP_SERVER_1}}">
 
-    <div class="battery-estimator-state">
-        <span>Current estimate</span>
+    <label for="ntpServer2">NTP Server 2</label>
+    <input id="ntpServer2" name="ntpServer2" type="text" value="{{NTP_SERVER_2}}">
 
-        <strong>
-            {{BATTERY_ESTIMATE}}
-        </strong>
+    <label for="ntpServer3">NTP Server 3</label>
+    <input id="ntpServer3" name="ntpServer3" type="text" value="{{NTP_SERVER_3}}">
 
-        <span>
-            Samples: {{BATTERY_SAMPLE_COUNT}}
-        </span>
+    <label for="ntpTimeoutSeconds">NTP Timeout</label>
+    <div class="input-with-unit">
+        <input
+            id="ntpTimeoutSeconds"
+            name="ntpTimeoutSeconds"
+            type="number"
+            min="1"
+            max="30"
+            value="{{NTP_TIMEOUT}}">
+        <span>seconds</span>
     </div>
 
+    <small class="field-help">
+        Device time is synchronized during wake-up when Wi-Fi is available.
+        If synchronization fails, the firmware can use an estimated time.
+    </small>
 </section>
+
+<section class="settings-card settings-battery settings-wide">
+    <h3>Battery</h3>
+
+    <div class="battery-settings-layout">
+        <div class="settings-subsection battery-parameters">
+            <h4>Configuration</h4>
+
+            <label for="batteryEmptyVoltage">Empty Battery Voltage</label>
+            <div class="input-with-unit">
+                <input id="batteryEmptyVoltage" name="batteryEmptyVoltage"
+                    type="number" min="0.01" step="0.01"
+                    value="{{BATTERY_EMPTY_VOLTAGE}}" required>
+                <span>V</span>
+            </div>
+
+            <label for="batteryFullVoltage">Full Battery Voltage</label>
+            <div class="input-with-unit">
+                <input id="batteryFullVoltage" name="batteryFullVoltage"
+                    type="number" min="0.02" step="0.01"
+                    value="{{BATTERY_FULL_VOLTAGE}}" required>
+                <span>V</span>
+            </div>
+
+            <label for="batteryCapacityMah">Battery Capacity</label>
+            <div class="input-with-unit">
+                <input id="batteryCapacityMah" name="batteryCapacityMah"
+                    type="number" min="1" max="100000"
+                    value="{{BATTERY_CAPACITY_MAH}}" required>
+                <span>mAh</span>
+            </div>
+
+            <label for="batteryChemistry">Battery Chemistry</label>
+            <select id="batteryChemistry" name="batteryChemistry">
+                <option value="custom" {{CHEM_CUSTOM_SELECTED}}>Custom</option>
+                <option value="li-ion" {{CHEM_LIION_SELECTED}}>Li-ion / LiPo</option>
+                <option value="lifepo4" {{CHEM_LIFEPO4_SELECTED}}>LiFePO4</option>
+                <option value="nimh" {{CHEM_NIMH_SELECTED}}>NiMH</option>
+            </select>
+
+            <label for="batteryCellCount">Number of Cells</label>
+            <input id="batteryCellCount" name="batteryCellCount"
+                type="number" min="1" max="255"
+                value="{{BATTERY_CELL_COUNT}}" required>
+
+            <small class="field-help">
+                Cell count applies when the measured voltage represents the complete pack.
+                Capacity affects lifetime estimation, not voltage-based percentage.
+            </small>
+        </div>
+
+        <div class="settings-subsection battery-learning">
+            <h4>Lifetime Estimate</h4>
+
+            <label class="switch-row">
+                <span>Test Mode</span>
+                <span class="switch-control">
+                    <input
+                        type="checkbox"
+                        name="batteryEstimateTestMode"
+                        value="1"
+                        {{BATTERY_TEST_MODE_CHECKED}}>
+                    <span class="switch-slider"></span>
+                </span>
+            </label>
+
+            <div class="estimate-requirements">
+                <span><strong>Test:</strong> 5 samples · 2 minutes</span>
+                <span><strong>Normal:</strong> 30 samples · 24 hours</span>
+            </div>
+
+            <div class="battery-estimator-state">
+                <span>Current estimate</span>
+                <strong>{{BATTERY_ESTIMATE}}</strong>
+                <span>Samples: {{BATTERY_SAMPLE_COUNT}}</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+                    <section class="settings-card settings-web-access">
+                        <h3>Web Access</h3>
+
+                        <label class="switch-row">
+                            <span>Enable Web Login</span>
+                            <span class="switch-control">
+                                <input
+                                    id="webLoginEnabled"
+                                    name="webLoginEnabled"
+                                    type="checkbox"
+                                    value="1"
+                                    {{WEB_LOGIN_ENABLED_CHECKED}}>
+                                <span class="switch-slider"></span>
+                            </span>
+                        </label>
+
+                        <div id="webLoginFields" class="web-login-fields">
+                            <label for="webUsername">Username</label>
+                            <input
+                                id="webUsername"
+                                name="webUsername"
+                                type="text"
+                                maxlength="32"
+                                autocomplete="username"
+                                value="{{WEB_USERNAME}}"
+                                placeholder="admin">
+
+                            <label for="webPassword">Password</label>
+                            <input
+                                id="webPassword"
+                                name="webPassword"
+                                type="password"
+                                minlength="4"
+                                maxlength="64"
+                                autocomplete="new-password"
+                                placeholder="Leave blank to keep unchanged">
+
+                            <small class="field-help">
+                                Leave blank to keep the current password.
+                            </small>
+
+                            <label for="webSessionTimeoutMinutes">
+                                Session Timeout
+                            </label>
+                            <div class="input-with-unit">
+                                <input
+                                    id="webSessionTimeoutMinutes"
+                                    name="webSessionTimeoutMinutes"
+                                    type="number"
+                                    min="1"
+                                    max="1440"
+                                    value="{{WEB_SESSION_TIMEOUT_MINUTES}}">
+                                <span>minutes</span>
+                            </div>
+                        </div>
+
+                        <div class="basic-security-note">
+                            Basic access barrier only. Use a trusted local network.
+                            Recovery access-point mode should remain accessible.
+                        </div>
+                    </section>
 
 </div>
 
@@ -852,14 +1100,11 @@
 
 </form>
 
-
 <form
     method="POST"
     action="/reset-battery-estimate"
     class="battery-reset-form"
-    onsubmit="return confirm(
-        'Reset all learned battery estimate data?'
-    );">
+    data-confirm="Reset all learned battery estimate data?">
 
     <button
         type="submit"
@@ -876,6 +1121,8 @@
 </form>
 
 </details>
+
+    </main>
 
 
     <!-- =====================================================
@@ -933,10 +1180,44 @@
                 "lastUpdated"
             );
 
-        if (updated) {
-            updated.textContent =
+        function updateDisplayedTime() {
+            const currentTime =
                 new Date().toLocaleTimeString();
+
+            if (updated) {
+                updated.textContent = currentTime;
+            }
         }
+
+        function updateQuickStatus(
+            cardId,
+            textId,
+            text,
+            statusClass
+        ) {
+            const card =
+                document.getElementById(cardId);
+
+            const output =
+                document.getElementById(textId);
+
+            if (output && text) {
+                output.textContent = text;
+            }
+
+            if (card && statusClass) {
+                card.classList.remove(
+                    "status-ok",
+                    "status-warning",
+                    "status-error",
+                    "status-neutral"
+                );
+
+                card.classList.add(statusClass);
+            }
+        }
+
+        updateDisplayedTime();
 
 
         /*
@@ -963,6 +1244,27 @@
 
                 const data =
                     await response.json();
+
+                updateQuickStatus(
+                    "sensorQuickStatus",
+                    "sensorStatusText",
+                    data.sensorStatus,
+                    data.sensorStatusClass
+                );
+
+                updateQuickStatus(
+                    "batteryQuickStatus",
+                    "batteryStatusText",
+                    data.batteryStatus,
+                    data.batteryStatusClass
+                );
+
+                updateQuickStatus(
+                    "mqttQuickStatus",
+                    "mqttStatusText",
+                    data.mqttStatus,
+                    data.mqttStatusClass
+                );
 
 
                 /*
@@ -1029,14 +1331,39 @@
 
 
                 /*
+                 * Device time
+                 */
+
+                const deviceTime =
+                    document.getElementById(
+                        "currentDeviceTime"
+                    );
+                const timeSource =
+                    document.getElementById(
+                        "currentTimeSource"
+                    );
+
+                if (deviceTime) {
+                    deviceTime.textContent =
+                        data.currentTimeValid
+                            ? new Date(
+                                data.currentTimestamp *
+                                1000
+                              ).toLocaleString()
+                            : "Unavailable";
+                }
+
+                if (timeSource) {
+                    timeSource.textContent =
+                        data.timeSource ||
+                        "Unavailable";
+                }
+
+                /*
                  * Last update time
                  */
 
-                if (updated) {
-                    updated.textContent =
-                        new Date()
-                            .toLocaleTimeString();
-                }
+                updateDisplayedTime();
             }
             catch (error) {
                 console.warn(
@@ -1055,6 +1382,105 @@
             refreshStatus,
             5000
         );
+    })();
+
+    (function () {
+        document.querySelectorAll("form[data-confirm]").forEach(function (form) {
+            form.addEventListener("submit", function (event) {
+                if (!window.confirm(form.dataset.confirm)) {
+                    event.preventDefault();
+                }
+            });
+        });
+
+        const mode = document.getElementById("networkMode");
+        const dhcpPanel = document.getElementById("dhcpConfiguration");
+        const manualPanel = document.getElementById("manualNetworkFields");
+        const copyButton = document.getElementById("useDhcpValues");
+        const apOpen = document.getElementById("apOpen");
+        const apPassword = document.getElementById("apPassword");
+        const openWarning = document.getElementById("openApWarning");
+        const webLoginEnabled = document.getElementById("webLoginEnabled");
+        const webLoginFields = document.getElementById("webLoginFields");
+
+        const manualFields = {
+            ip: document.getElementById("wifiStaticIp"),
+            gateway: document.getElementById("wifiGateway"),
+            subnet: document.getElementById("wifiSubnet"),
+            dns1: document.getElementById("wifiDns1"),
+            dns2: document.getElementById("wifiDns2")
+        };
+
+        function available(value) {
+            return value && value !== "-" && value !== "0.0.0.0";
+        }
+
+        function copyDhcpValues(onlyEmpty) {
+            Object.keys(manualFields).forEach(function (key) {
+                const field = manualFields[key];
+                const value = dhcpPanel.dataset[key];
+                if (field && available(value) && (!onlyEmpty || !field.value.trim())) {
+                    field.value = value;
+                }
+            });
+        }
+
+        function updateNetworkMode(prefill) {
+            const manual = mode.value === "manual";
+            manualPanel.hidden = !manual;
+            dhcpPanel.hidden = manual;
+            if (manual && prefill) {
+                copyDhcpValues(true);
+            }
+        }
+
+        mode.addEventListener("change", function () {
+            updateNetworkMode(true);
+        });
+
+        copyButton.addEventListener("click", function () {
+            mode.value = "manual";
+            updateNetworkMode(false);
+            copyDhcpValues(false);
+        });
+
+        function updateApSecurity() {
+            apPassword.disabled = apOpen.checked;
+            openWarning.hidden = !apOpen.checked;
+            if (apOpen.checked) {
+                apPassword.value = "";
+            }
+        }
+
+        function updateWebLoginFields() {
+            if (!webLoginEnabled || !webLoginFields) {
+                return;
+            }
+
+            webLoginFields.classList.toggle(
+                "web-login-fields-disabled",
+                !webLoginEnabled.checked
+            );
+
+            webLoginFields
+                .querySelectorAll("input")
+                .forEach(function (input) {
+                    input.disabled = !webLoginEnabled.checked;
+                });
+        }
+
+        apOpen.addEventListener("change", updateApSecurity);
+
+        if (webLoginEnabled) {
+            webLoginEnabled.addEventListener(
+                "change",
+                updateWebLoginFields
+            );
+        }
+
+        updateNetworkMode(false);
+        updateApSecurity();
+        updateWebLoginFields();
     })();
 </script>
 
