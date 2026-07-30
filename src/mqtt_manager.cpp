@@ -1,4 +1,5 @@
 #include "mqtt_manager.h"
+#include "sleep_manager.h"
 
 #include <WiFi.h>
 #include <PubSubClient.h>
@@ -88,6 +89,11 @@ void MqttManager::begin()
 
 void MqttManager::loop()
 {
+    if (!SleepManager::canStartNormalWork())
+    {
+        return;
+    }
+
     if (!Settings::data.mqttEnabled)
     {
         state =
@@ -150,6 +156,11 @@ void MqttManager::loop()
 
 bool MqttManager::connect()
 {
+    if (!SleepManager::canStartNormalWork())
+    {
+        return false;
+    }
+
     if (!Settings::data.mqttEnabled)
     {
         Logger::warning(
@@ -326,6 +337,11 @@ void MqttManager::disconnect()
 
 bool MqttManager::publishDiscovery()
 {
+    if (!SleepManager::canStartNormalWork())
+    {
+        return false;
+    }
+
     if (!isConnected())
     {
         Logger::warning(
@@ -698,6 +714,11 @@ void MqttManager::recordDiscoveryResult(
 
 bool MqttManager::publishMeasurement()
 {
+    if (!SleepManager::canStartNormalWork())
+    {
+        return false;
+    }
+
     if (!isConnected())
     {
         return false;
@@ -800,6 +821,11 @@ bool MqttManager::publishMeasurement()
 
 bool MqttManager::publishStatus()
 {
+    if (!SleepManager::canStartNormalWork())
+    {
+        return false;
+    }
+
     if (!isConnected())
     {
         return false;

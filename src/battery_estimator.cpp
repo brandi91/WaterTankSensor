@@ -1,4 +1,5 @@
 #include "battery_estimator.h"
+#include "sleep_manager.h"
 
 #include <Preferences.h>
 
@@ -221,6 +222,11 @@ void BatteryEstimator::addSample(
     uint32_t elapsedSeconds
 )
 {
+    if (!SleepManager::canStartNormalWork())
+    {
+        return;
+    }
+
     if (!initialized)
     {
         begin();

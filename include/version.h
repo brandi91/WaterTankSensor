@@ -14,4 +14,4 @@
  */
 
 #define FW_NAME "WaterTankSensor"
-#define FW_VERSION "0.9.6"
+#define FW_VERSION "0.9.7"

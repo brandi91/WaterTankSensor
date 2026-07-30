@@ -83,6 +83,45 @@ void test_battery_rejects_invalid_configuration()
     );
 }
 
+void test_deep_sleep_decisions()
+{
+    using CoreLogic::RuntimeMode;
+    TEST_ASSERT_TRUE(CoreLogic::shouldEnterDeepSleep(
+        true, false, false, RuntimeMode::Running
+    ));
+    TEST_ASSERT_FALSE(CoreLogic::shouldEnterDeepSleep(
+        false, false, false, RuntimeMode::Running
+    ));
+    TEST_ASSERT_TRUE(CoreLogic::shouldEnterDeepSleep(
+        false, true, false, RuntimeMode::Running
+    ));
+    TEST_ASSERT_FALSE(CoreLogic::shouldEnterDeepSleep(
+        true, false, true, RuntimeMode::Running
+    ));
+}
+
+void test_sleep_preparation_blocks_normal_work()
+{
+    using CoreLogic::RuntimeMode;
+    TEST_ASSERT_TRUE(CoreLogic::canStartNormalWork(RuntimeMode::Running));
+    TEST_ASSERT_FALSE(
+        CoreLogic::canStartNormalWork(RuntimeMode::PreparingSleep)
+    );
+    TEST_ASSERT_FALSE(CoreLogic::canStartNormalWork(RuntimeMode::Sleeping));
+}
+
+void test_awake_measurement_scheduler()
+{
+    TEST_ASSERT_FALSE(CoreLogic::isMeasurementDue(999UL, 0UL, 1000UL));
+    TEST_ASSERT_TRUE(CoreLogic::isMeasurementDue(1000UL, 0UL, 1000UL));
+    TEST_ASSERT_FALSE(CoreLogic::isMeasurementDue(1000UL, 0UL, 0UL));
+    TEST_ASSERT_TRUE(CoreLogic::isMeasurementDue(
+        20UL,
+        0xFFFFFFF0UL,
+        30UL
+    ));
+}
+
 int main()
 {
     UNITY_BEGIN();
@@ -91,5 +130,8 @@ int main()
     RUN_TEST(test_tank_rejects_invalid_inputs);
     RUN_TEST(test_battery_percentage_boundaries);
     RUN_TEST(test_battery_rejects_invalid_configuration);
+    RUN_TEST(test_deep_sleep_decisions);
+    RUN_TEST(test_sleep_preparation_blocks_normal_work);
+    RUN_TEST(test_awake_measurement_scheduler);
     return UNITY_END();
 }

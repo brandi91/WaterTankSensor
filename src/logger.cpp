@@ -1,4 +1,5 @@
 #include "logger.h"
+#include "sleep_manager.h"
 
 #include <LittleFS.h>
 
@@ -546,6 +547,11 @@ void Logger::print(
     const String& message
 )
 {
+    if (SleepManager::isPreparingForSleep())
+    {
+        return;
+    }
+
     Serial.print("[");
     Serial.print(level);
     Serial.print("] ");

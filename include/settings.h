@@ -65,6 +65,7 @@ struct SettingsData
      * Mess- und Deep-Sleep-Intervall in Sekunden.
      */
     uint32_t measureInterval = 300;
+    bool deepSleepEnabled = true;
 
     bool ntpEnabled = true;
     String timeZone = "UTC0";

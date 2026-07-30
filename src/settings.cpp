@@ -81,6 +81,9 @@ constexpr const char* KEY_SENSOR_CLEARANCE =
 
 constexpr const char* KEY_MEASURE_INTERVAL =
     "interval";
+// ESP32 NVS limits key names to 15 characters.
+constexpr const char* KEY_DEEP_SLEEP_ENABLED =
+    "deepSleep";
 
 constexpr const char* KEY_NTP_ENABLED = "ntpEnabled";
 constexpr const char* KEY_TIME_ZONE = "timeZone";
@@ -209,6 +212,11 @@ void initializeMissingDefaults()
             KEY_MEASURE_INTERVAL,
             DEFAULT_MEASURE_INTERVAL
         );
+    }
+
+    if (!preferences.isKey(KEY_DEEP_SLEEP_ENABLED))
+    {
+        preferences.putBool(KEY_DEEP_SLEEP_ENABLED, true);
     }
 
     if (!preferences.isKey(KEY_NTP_ENABLED))
@@ -459,6 +467,11 @@ void Settings::load()
         preferences.getULong(
             KEY_MEASURE_INTERVAL,
             DEFAULT_MEASURE_INTERVAL
+        );
+    data.deepSleepEnabled =
+        preferences.getBool(
+            KEY_DEEP_SLEEP_ENABLED,
+            true
         );
 
     data.apSsid = preferences.isKey(KEY_AP_SSID)
@@ -768,6 +781,10 @@ void Settings::save()
     preferences.putULong(
     KEY_MEASURE_INTERVAL,
     data.measureInterval
+);
+preferences.putBool(
+    KEY_DEEP_SLEEP_ENABLED,
+    data.deepSleepEnabled
 );
 
 preferences.putBool(KEY_NTP_ENABLED, data.ntpEnabled);

@@ -1,4 +1,5 @@
 #include "time_manager.h"
+#include "sleep_manager.h"
 
 #include <Preferences.h>
 #include <WiFi.h>
@@ -68,6 +69,11 @@ void TimeManager::begin()
 
 bool TimeManager::syncFromNtp()
 {
+    if (!SleepManager::canStartNormalWork())
+    {
+        return false;
+    }
+
     begin();
 
     if (

@@ -647,6 +647,21 @@
                             <small class="field-help">
                                 This value is also used as the deep-sleep interval.
                             </small>
+
+                            <label class="switch-row">
+                                <span>Enable Deep Sleep</span>
+                                <span class="switch-control">
+                                    <input
+                                        id="deepSleepEnabled"
+                                        name="deepSleepEnabled"
+                                        type="checkbox"
+                                        {{DEEP_SLEEP_ENABLED_CHECKED}}>
+                                    <span class="switch-slider"></span>
+                                </span>
+                            </label>
+                            <small class="field-help">
+                                When disabled, the device remains awake between measurements.
+                            </small>
                         </div>
 
                         <div class="settings-subsection">

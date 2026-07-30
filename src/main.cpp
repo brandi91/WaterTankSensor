@@ -4,6 +4,7 @@
 #include "battery_estimator.h"
 #include "button.h"
 #include "config.h"
+#include "core_logic.h"
 #include "factory_reset.h"
 #include "led.h"
 #include "logger.h"
@@ -45,6 +46,10 @@ unsigned long lastWebIndicatorToggle = 0;
 unsigned long webIndicatorStartedAt = 0;
 unsigned long lastBatteryLog = 0;
 bool timeSyncAttempted = false;
+unsigned long lastAutomaticMeasurementAt = 0;
+bool awakeServicesInitialized = false;
+bool awakeSchedulingActive = false;
+bool lastDeepSleepEnabled = true;
 
 
 /*
@@ -423,15 +428,31 @@ void transmitMeasurement()
  */
 void enterNormalDeepSleep()
 {
-    WebServerManager::stop();
+    if (
+        !CoreLogic::shouldEnterDeepSleep(
+            Settings::data.deepSleepEnabled,
+            false,
+            WebServerManager::isConfigPortalActive(),
+            SleepManager::getRuntimeMode()
+        )
+    )
+    {
+        lastAutomaticMeasurementAt = millis();
+        awakeSchedulingActive = true;
+        Logger::info(
+            "Automatic deep sleep disabled; remaining awake"
+        );
 
+        if (!awakeServicesInitialized)
+        {
+            WebServerManager::begin();
 #if MQTT_ENABLED
-    MqttManager::disconnect();
+            MqttManager::begin();
 #endif
-
-    WifiManager::disconnect();
-
-    Led::off();
+            awakeServicesInitialized = true;
+        }
+        return;
+    }
 
     const uint32_t sleepSeconds =
         static_cast<uint32_t>(
@@ -567,6 +588,8 @@ void setup()
     );
 
     Settings::begin();
+    lastDeepSleepEnabled =
+        Settings::data.deepSleepEnabled;
     TimeManager::begin();
 
     Battery::begin();
@@ -635,6 +658,15 @@ void setup()
             Settings::data.measureInterval
         ) +
         " s"
+    );
+
+    Logger::info(
+        "Deep Sleep       : " +
+        String(
+            Settings::data.deepSleepEnabled
+                ? "enabled"
+                : "disabled"
+        )
     );
 
 
@@ -737,6 +769,8 @@ void setup()
         "System ready"
     );
 
+    lastAutomaticMeasurementAt = millis();
+
     Logger::info(
         "================================="
     );
@@ -751,6 +785,12 @@ void setup()
 
 void loop()
 {
+    if (!SleepManager::canStartNormalWork())
+    {
+        delay(5);
+        return;
+    }
+
     Button::loop();
     Battery::loop();
     Sensor::loop();
@@ -916,6 +956,47 @@ void loop()
      */
     const unsigned long now =
         millis();
+
+    /*
+     * Awake-mode scheduling deliberately uses the last automatic
+     * measurement as its baseline. Manual web/button measurements do not
+     * postpone the configured periodic cycle.
+     */
+    const unsigned long intervalMs =
+        static_cast<unsigned long>(
+            Settings::data.measureInterval
+        ) * 1000UL;
+    if (
+        Settings::data.deepSleepEnabled !=
+        lastDeepSleepEnabled
+    )
+    {
+        lastDeepSleepEnabled =
+            Settings::data.deepSleepEnabled;
+        lastAutomaticMeasurementAt = now;
+    }
+    if (!Settings::data.deepSleepEnabled)
+    {
+        awakeSchedulingActive = true;
+    }
+    if (
+        awakeSchedulingActive &&
+        !WebServerManager::isConfigPortalActive() &&
+        CoreLogic::isMeasurementDue(
+            now,
+            lastAutomaticMeasurementAt,
+            intervalMs
+        )
+    )
+    {
+        lastAutomaticMeasurementAt = now;
+        performMeasurement(
+            static_cast<uint32_t>(
+                Settings::data.measureInterval
+            )
+        );
+        enterNormalDeepSleep();
+    }
 
     if (
         now - lastBatteryLog >=

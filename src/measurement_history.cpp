@@ -1,4 +1,5 @@
 #include "measurement_history.h"
+#include "sleep_manager.h"
 
 #include <LittleFS.h>
 #include <math.h>
@@ -372,6 +373,11 @@ void MeasurementHistory::begin()
 
 bool MeasurementHistory::addCurrentMeasurement()
 {
+    if (!SleepManager::canStartNormalWork())
+    {
+        return false;
+    }
+
     if (!initialized)
     {
         Logger::warning(

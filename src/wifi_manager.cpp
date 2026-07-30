@@ -1,4 +1,5 @@
 #include "wifi_manager.h"
+#include "sleep_manager.h"
 
 #include <WiFi.h>
 #include <ESPmDNS.h>
@@ -53,6 +54,11 @@ void WifiManager::begin()
 
 bool WifiManager::connect()
 {
+    if (!SleepManager::canStartNormalWork())
+    {
+        return false;
+    }
+
     if (Settings::data.wifiSSID.isEmpty())
     {
         Logger::warning("Wi-Fi SSID is empty");
@@ -98,6 +104,11 @@ void WifiManager::startConnection()
 
 void WifiManager::loop()
 {
+    if (!SleepManager::canStartNormalWork())
+    {
+        return;
+    }
+
     const unsigned long now = millis();
 
     if (WiFi.isConnected())

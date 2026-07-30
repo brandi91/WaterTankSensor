@@ -85,4 +85,34 @@ int calculateBatteryPercentage(
         0.5f
     );
 }
+
+bool shouldEnterDeepSleep(
+    const bool deepSleepEnabled,
+    const bool manualOverride,
+    const bool recoveryMode,
+    const RuntimeMode runtimeMode
+)
+{
+    if (runtimeMode != RuntimeMode::Running)
+    {
+        return false;
+    }
+    return manualOverride || (deepSleepEnabled && !recoveryMode);
+}
+
+bool canStartNormalWork(const RuntimeMode runtimeMode)
+{
+    return runtimeMode == RuntimeMode::Running;
+}
+
+bool isMeasurementDue(
+    const unsigned long now,
+    const unsigned long lastMeasurementAt,
+    const unsigned long intervalMs
+)
+{
+    return
+        intervalMs > 0 &&
+        now - lastMeasurementAt >= intervalMs;
+}
 }

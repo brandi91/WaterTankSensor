@@ -170,6 +170,12 @@
 #define DEBUG_DISABLE_DEEP_SLEEP false
 
 /*
+ * Optional retained markers for hardware sleep-entry audits.
+ * Keep disabled for normal builds.
+ */
+#define DEEP_SLEEP_AUDIT_DIAGNOSTICS false
+
+/*
  * Der Taster verbindet GPIO 33 beim Drücken mit GND.
  * Deshalb wird bei LOW aufgeweckt.
  */

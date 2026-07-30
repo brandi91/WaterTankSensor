@@ -1593,6 +1593,9 @@ void WebServerManager::handleSave()
         }
     }
 
+    Settings::data.deepSleepEnabled =
+        server.hasArg("deepSleepEnabled");
+
     const bool requestedNtpEnabled =
         server.hasArg("ntpEnabled");
     const String ntpServer1 =
@@ -2712,6 +2715,12 @@ void WebServerManager::processTemplate(
     page.replace(
         "{{MEASURE_INTERVAL}}",
         String(intervalDisplayValue)
+    );
+    page.replace(
+        "{{DEEP_SLEEP_ENABLED_CHECKED}}",
+        Settings::data.deepSleepEnabled
+            ? "checked"
+            : ""
     );
 
     page.replace(

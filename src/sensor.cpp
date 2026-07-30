@@ -4,6 +4,7 @@
 #include "logger.h"
 #include "settings.h"
 #include "core_logic.h"
+#include "sleep_manager.h"
 
 
 float Sensor::distanceCm = 0.0f;
@@ -41,6 +42,11 @@ void Sensor::loop()
 
 bool Sensor::measure()
 {
+    if (!SleepManager::canStartNormalWork())
+    {
+        return false;
+    }
+
     measurementAttempted = true;
 
     const float measuredDistance =
