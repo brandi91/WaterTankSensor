@@ -236,26 +236,32 @@
 
             <div class="quick-status-grid">
 
-                <div class="quick-status-item">
-                    <span class="status-circle status-ok">
-                        ✓
-                    </span>
+                <div
+                    class="quick-status-item {{SENSOR_STATUS_CLASS}}"
+                    id="sensorQuickStatus">
+
+                    <span class="status-circle"></span>
 
                     <div>
                         <span>Sensor</span>
-                        <strong>{{SENSOR_STATUS}}</strong>
+                        <strong id="sensorStatusText">
+                            {{SENSOR_STATUS}}
+                        </strong>
                     </div>
                 </div>
 
 
-                <div class="quick-status-item">
-                    <span class="status-circle status-ok">
-                        ✓
-                    </span>
+                <div
+                    class="quick-status-item {{BATTERY_STATUS_CLASS}}"
+                    id="batteryQuickStatus">
+
+                    <span class="status-circle"></span>
 
                     <div>
                         <span>Battery</span>
-                        <strong>{{BATTERY_STATUS}}</strong>
+                        <strong id="batteryStatusText">
+                            {{BATTERY_STATUS}}
+                        </strong>
                     </div>
                 </div>
 
@@ -272,14 +278,31 @@
                 </div>
 
 
-                <div class="quick-status-item">
+                <div
+                    class="quick-status-item {{MQTT_STATUS_CLASS}}"
+                    id="mqttQuickStatus">
+
                     <span class="status-symbol">
                         ▣
                     </span>
 
                     <div>
                         <span>MQTT</span>
-                        <strong>Not installed</strong>
+                        <strong id="mqttStatusText">
+                            {{MQTT_STATUS}}
+                        </strong>
+                    </div>
+                </div>
+
+
+                <div class="quick-status-item status-neutral">
+                    <span class="status-symbol">
+                        ⏻
+                    </span>
+
+                    <div>
+                        <span>Power Source</span>
+                        <strong>{{POWER_SOURCE}}</strong>
                     </div>
                 </div>
 
@@ -301,7 +324,9 @@
 
             <div class="details-content">
 
-                <div class="details-column">
+                <section class="details-group">
+
+                    <h3>Device Details</h3>
 
                     <div class="detail-row">
                         <span>Device Name</span>
@@ -311,6 +336,53 @@
                     <div class="detail-row">
                         <span>Firmware</span>
                         <strong>{{FW_VERSION}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Sensor Status</span>
+                        <strong>{{SENSOR_STATUS}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Battery Status</span>
+                        <strong>{{BATTERY_STATUS}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Battery Percentage</span>
+                        <strong>{{BATTERY_PERCENT}}%</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Battery Voltage</span>
+                        <strong>{{BATTERY_VOLTAGE}} V</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Power Source</span>
+                        <strong>{{POWER_SOURCE}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Dashboard Updated</span>
+                        <strong id="technicalLastUpdated">Just now</strong>
+                    </div>
+
+                </section>
+
+
+                <section class="details-group">
+
+                    <h3>Network</h3>
+
+                    <div class="detail-row">
+                        <span>Wi-Fi Mode</span>
+                        <strong>{{NETWORK_MODE}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>SSID</span>
+                        <strong>{{CURRENT_WIFI_SSID}}</strong>
                     </div>
 
                     <div class="detail-row">
@@ -334,51 +406,58 @@
                     </div>
 
                     <div class="detail-row">
-                        <span>Signal Strength</span>
-                        <strong>{{WIFI_RSSI}} dBm</strong>
-                    </div>
-
-                </div>
-
-
-                <div class="details-column">
-
-                    <div class="detail-row">
-                        <span>Operating Mode</span>
-                        <strong>{{NETWORK_MODE}}</strong>
-                    </div>
-
-                    <div class="detail-row">
                         <span>DNS 2</span>
                         <strong>{{CURRENT_DNS_2}}</strong>
                     </div>
 
                     <div class="detail-row">
-                        <span>Wi-Fi Hostname</span>
+                        <span>Hostname</span>
                         <strong>{{WIFI_HOSTNAME}}</strong>
                     </div>
 
                     <div class="detail-row">
-                        <span>mDNS Address</span>
+                        <span>mDNS Name</span>
                         <strong>{{MDNS_NAME}}</strong>
                     </div>
 
                     <div class="detail-row">
-                        <span>Sensor Status</span>
-                        <strong>{{SENSOR_STATUS}}</strong>
+                        <span>Signal Strength</span>
+                        <strong>{{WIFI_RSSI}} dBm</strong>
+                    </div>
+
+                </section>
+
+
+                <section class="details-group">
+
+                    <h3>MQTT Status</h3>
+
+                    <div class="detail-row">
+                        <span>MQTT</span>
+                        <strong>{{MQTT_ENABLED_STATUS}}</strong>
                     </div>
 
                     <div class="detail-row">
-                        <span>Battery Status</span>
-                        <strong>{{BATTERY_STATUS}}</strong>
+                        <span>Connection</span>
+                        <strong>{{MQTT_STATUS}}</strong>
                     </div>
 
                     <div class="detail-row">
-                        <span>MQTT Status</span>
-                        <strong>Not installed</strong>
+                        <span>Server</span>
+                        <strong>{{MQTT_SERVER}}</strong>
                     </div>
 
-                </div>
+                    <div class="detail-row">
+                        <span>Port</span>
+                        <strong>{{MQTT_PORT}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Discovery</span>
+                        <strong>{{MQTT_DISCOVERY_STATUS}}</strong>
+                    </div>
+
+                </section>
 
             </div>
 
@@ -933,10 +1012,54 @@
                 "lastUpdated"
             );
 
-        if (updated) {
-            updated.textContent =
+        const technicalUpdated =
+            document.getElementById(
+                "technicalLastUpdated"
+            );
+
+        function updateDisplayedTime() {
+            const currentTime =
                 new Date().toLocaleTimeString();
+
+            if (updated) {
+                updated.textContent = currentTime;
+            }
+
+            if (technicalUpdated) {
+                technicalUpdated.textContent =
+                    currentTime;
+            }
         }
+
+        function updateQuickStatus(
+            cardId,
+            textId,
+            text,
+            statusClass
+        ) {
+            const card =
+                document.getElementById(cardId);
+
+            const output =
+                document.getElementById(textId);
+
+            if (output && text) {
+                output.textContent = text;
+            }
+
+            if (card && statusClass) {
+                card.classList.remove(
+                    "status-ok",
+                    "status-warning",
+                    "status-error",
+                    "status-neutral"
+                );
+
+                card.classList.add(statusClass);
+            }
+        }
+
+        updateDisplayedTime();
 
 
         /*
@@ -963,6 +1086,27 @@
 
                 const data =
                     await response.json();
+
+                updateQuickStatus(
+                    "sensorQuickStatus",
+                    "sensorStatusText",
+                    data.sensorStatus,
+                    data.sensorStatusClass
+                );
+
+                updateQuickStatus(
+                    "batteryQuickStatus",
+                    "batteryStatusText",
+                    data.batteryStatus,
+                    data.batteryStatusClass
+                );
+
+                updateQuickStatus(
+                    "mqttQuickStatus",
+                    "mqttStatusText",
+                    data.mqttStatus,
+                    data.mqttStatusClass
+                );
 
 
                 /*
@@ -1032,11 +1176,7 @@
                  * Last update time
                  */
 
-                if (updated) {
-                    updated.textContent =
-                        new Date()
-                            .toLocaleTimeString();
-                }
+                updateDisplayedTime();
             }
             catch (error) {
                 console.warn(

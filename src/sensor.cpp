@@ -11,6 +11,7 @@ float Sensor::waterLevelCm = 0.0f;
 int Sensor::percentage = 0;
 
 bool Sensor::valid = false;
+bool Sensor::measurementAttempted = false;
 
 
 void Sensor::begin()
@@ -32,6 +33,8 @@ void Sensor::loop()
 
 bool Sensor::measure()
 {
+    measurementAttempted = true;
+
     const float measuredDistance =
         readDistance();
 
@@ -217,4 +220,9 @@ int Sensor::getPercentage()
 bool Sensor::isValid()
 {
     return valid;
+}
+
+bool Sensor::hasMeasurementAttempted()
+{
+    return measurementAttempted;
 }

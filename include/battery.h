@@ -12,6 +12,7 @@ public:
     static bool isLow();
     static bool isCritical();
     static bool isCharging();
+    static const char* getPowerSourceText();
 
 private:
     static float readVoltage();

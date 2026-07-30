@@ -65,6 +65,12 @@ private:
 
     static String getIpAddress();
     static String getNetworkMode();
+    static String getSensorStatusText();
+    static String getSensorStatusClass();
+    static String getBatteryStatusText();
+    static String getBatteryStatusClass();
+    static String getMqttStatusText();
+    static String getMqttStatusClass();
 
     static String htmlEscape(
         const String& value

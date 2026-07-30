@@ -846,22 +846,22 @@ String MqttManager::getStateText()
     switch (state)
     {
         case MqttState::Disabled:
-            return "Deaktiviert";
+            return "Disabled";
 
         case MqttState::Disconnected:
-            return "Nicht verbunden";
+            return "Disconnected";
 
         case MqttState::Connecting:
-            return "Verbindung wird aufgebaut";
+            return "Connecting";
 
         case MqttState::Connected:
-            return "Verbunden";
+            return "Connected";
 
         case MqttState::ConnectionFailed:
-            return "Verbindung fehlgeschlagen";
+            return "Connection failed";
 
         default:
-            return "Unbekannt";
+            return "Unknown";
     }
 }
 

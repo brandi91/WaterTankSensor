@@ -383,16 +383,10 @@ void WebServerManager::handleStatus()
             : "-";
 
     const String sensorStatus =
-        sensorValid
-            ? "OK"
-            : "Noch keine gültige Messung";
+        getSensorStatusText();
 
     const String batteryStatus =
-        Battery::isCritical()
-            ? "Kritisch"
-            : Battery::isLow()
-                ? "Niedrig"
-                : "OK";
+        getBatteryStatusText();
 
     const String wifiRssi =
         WifiManager::isConnected()
@@ -481,9 +475,21 @@ void WebServerManager::handleStatus()
     json += sensorStatus;
     json += "\",";
 
-json += "\"batteryStatus\":\"";
-json += batteryStatus;
-json += "\",";
+    json += "\"sensorStatusClass\":\"";
+    json += getSensorStatusClass();
+    json += "\",";
+
+    json += "\"batteryStatus\":\"";
+    json += batteryStatus;
+    json += "\",";
+
+    json += "\"batteryStatusClass\":\"";
+    json += getBatteryStatusClass();
+    json += "\",";
+
+    json += "\"powerSource\":\"";
+    json += Battery::getPowerSourceText();
+    json += "\",";
 
 json += "\"batteryEstimate\":\"";
 json += BatteryEstimator::getDisplayText();
@@ -501,14 +507,12 @@ json += Settings::data.batteryEstimateTestMode
     : "false";
 json += ",";
 
-json += "\"mqttStatus\":\"";
+    json += "\"mqttStatus\":\"";
+    json += getMqttStatusText();
+    json += "\",";
 
-#if MQTT_ENABLED
-    json += MqttManager::getStateText();
-#else
-    json += "Nicht eingebaut";
-#endif
-
+    json += "\"mqttStatusClass\":\"";
+    json += getMqttStatusClass();
     json += "\"";
 
     json += "}";
@@ -1001,7 +1005,7 @@ void WebServerManager::sendTemplate(
         server.send(
             500,
             "text/plain; charset=utf-8",
-            "LittleFS ist nicht verfügbar."
+            "LittleFS is not available."
         );
 
         return;
@@ -1019,7 +1023,7 @@ void WebServerManager::sendTemplate(
         server.send(
             404,
             "text/plain; charset=utf-8",
-            "Webseite nicht gefunden: " +
+            "Web page not found: " +
             path
         );
 
@@ -1050,7 +1054,7 @@ void WebServerManager::sendFile(
         server.send(
             500,
             "text/plain; charset=utf-8",
-            "LittleFS ist nicht verfügbar."
+            "LittleFS is not available."
         );
 
         return;
@@ -1066,7 +1070,7 @@ void WebServerManager::sendFile(
         server.send(
             404,
             "text/plain; charset=utf-8",
-            "Datei nicht gefunden."
+            "File not found."
         );
 
         return;
@@ -1087,7 +1091,7 @@ void WebServerManager::sendFile(
         server.send(
             500,
             "text/plain; charset=utf-8",
-            "Datei konnte nicht geöffnet werden."
+            "Could not open file."
         );
 
         return;
@@ -1358,9 +1362,12 @@ String WebServerManager::processTemplate(
 
     page.replace(
         "{{SENSOR_STATUS}}",
-        Sensor::isValid()
-            ? "OK"
-            : "Noch keine gültige Messung"
+        getSensorStatusText()
+    );
+
+    page.replace(
+        "{{SENSOR_STATUS_CLASS}}",
+        getSensorStatusClass()
     );
 
     page.replace(
@@ -1378,14 +1385,65 @@ String WebServerManager::processTemplate(
         )
     );
 
- page.replace(
+page.replace(
     "{{BATTERY_STATUS}}",
-    Battery::isCritical()
-        ? "Critical"
-        : Battery::isLow()
-            ? "Low"
-            : "OK"
+    getBatteryStatusText()
 );
+
+page.replace(
+    "{{BATTERY_STATUS_CLASS}}",
+    getBatteryStatusClass()
+);
+
+page.replace(
+    "{{POWER_SOURCE}}",
+    Battery::getPowerSourceText()
+);
+
+page.replace(
+    "{{CURRENT_WIFI_SSID}}",
+    WifiManager::isConnected()
+        ? htmlEscape(
+            WifiManager::getSsid()
+          )
+        : "-"
+);
+
+page.replace(
+    "{{MQTT_STATUS}}",
+    getMqttStatusText()
+);
+
+page.replace(
+    "{{MQTT_STATUS_CLASS}}",
+    getMqttStatusClass()
+);
+
+#if MQTT_ENABLED
+page.replace(
+    "{{MQTT_ENABLED_STATUS}}",
+    Settings::data.mqttEnabled
+        ? "Enabled"
+        : "Disabled"
+);
+
+page.replace(
+    "{{MQTT_DISCOVERY_STATUS}}",
+    Settings::data.mqttEnabled
+        ? "Available"
+        : "Disabled"
+);
+#else
+page.replace(
+    "{{MQTT_ENABLED_STATUS}}",
+    "Not available"
+);
+
+page.replace(
+    "{{MQTT_DISCOVERY_STATUS}}",
+    "Not available"
+);
+#endif
 
 page.replace(
     "{{BATTERY_ESTIMATE}}",
@@ -1442,7 +1500,7 @@ String WebServerManager::getIpAddress()
         return WiFi.localIP().toString();
     }
 
-    return "Nicht verbunden";
+    return "Disconnected";
 }
 
 String WebServerManager::getNetworkMode()
@@ -1452,20 +1510,112 @@ String WebServerManager::getNetworkMode()
         WiFi.status() == WL_CONNECTED
     )
     {
-        return "WLAN + Konfigurations-AP";
+        return "Wi-Fi + configuration access point";
     }
 
     if (configPortalActive)
     {
-        return "Konfigurations-AP";
+        return "Configuration access point";
     }
 
     if (WiFi.status() == WL_CONNECTED)
     {
-        return "WLAN";
+        return "Wi-Fi connected";
     }
 
     return "Offline";
+}
+
+String WebServerManager::getSensorStatusText()
+{
+    if (Sensor::isValid())
+    {
+        return "OK";
+    }
+
+    return Sensor::hasMeasurementAttempted()
+        ? "Sensor error"
+        : "No measurement yet";
+}
+
+String WebServerManager::getSensorStatusClass()
+{
+    if (Sensor::isValid())
+    {
+        return "status-ok";
+    }
+
+    return Sensor::hasMeasurementAttempted()
+        ? "status-error"
+        : "status-warning";
+}
+
+String WebServerManager::getBatteryStatusText()
+{
+    const int percentage =
+        Battery::getPercentage();
+
+    if (percentage < 5)
+    {
+        return "Critical";
+    }
+
+    if (percentage < 20)
+    {
+        return "Warning";
+    }
+
+    return "OK";
+}
+
+String WebServerManager::getBatteryStatusClass()
+{
+    const int percentage =
+        Battery::getPercentage();
+
+    if (percentage < 5)
+    {
+        return "status-error";
+    }
+
+    if (percentage < 20)
+    {
+        return "status-warning";
+    }
+
+    return "status-ok";
+}
+
+String WebServerManager::getMqttStatusText()
+{
+#if MQTT_ENABLED
+    if (!Settings::data.mqttEnabled)
+    {
+        return "Disabled";
+    }
+
+    return MqttManager::isConnected()
+        ? "Connected"
+        : "Disconnected";
+#else
+    return "Not available";
+#endif
+}
+
+String WebServerManager::getMqttStatusClass()
+{
+#if MQTT_ENABLED
+    if (!Settings::data.mqttEnabled)
+    {
+        return "status-neutral";
+    }
+
+    return MqttManager::isConnected()
+        ? "status-ok"
+        : "status-warning";
+#else
+    return "status-neutral";
+#endif
 }
 
 String WebServerManager::htmlEscape(

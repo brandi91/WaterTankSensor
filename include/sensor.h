@@ -15,6 +15,7 @@ public:
     static int getPercentage();
 
     static bool isValid();
+    static bool hasMeasurementAttempted();
 
 private:
     static float readDistance();
@@ -25,4 +26,5 @@ private:
     static float waterLevelCm;
     static int percentage;
     static bool valid;
+    static bool measurementAttempted;
 };

@@ -190,3 +190,13 @@ bool Battery::isCharging()
      */
     return false;
 }
+
+const char* Battery::getPowerSourceText()
+{
+    /*
+     * The current hardware has no VBUS sense input,
+     * charger status signal or other reliable way to
+     * distinguish USB power from battery power.
+     */
+    return "Unknown";
+}
