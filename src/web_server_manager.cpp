@@ -1463,7 +1463,7 @@ void WebServerManager::sendTemplate(
         return;
     }
 
-    page = processTemplate(page);
+    processTemplate(page);
 
     server.sendHeader(
         "Cache-Control",
@@ -1585,8 +1585,8 @@ String WebServerManager::loadFile(
     return content;
 }
 
-String WebServerManager::processTemplate(
-    String page
+void WebServerManager::processTemplate(
+    String& page
 )
 {
     page.replace(
@@ -2053,7 +2053,6 @@ page.replace(
         : "Normal mode"
 );
 
-return page;
 }
 
 String WebServerManager::getIpAddress()

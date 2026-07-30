@@ -64,8 +64,8 @@ private:
         const String& path
     );
 
-    static String processTemplate(
-        String page
+    static void processTemplate(
+        String& page
     );
 
     static String getIpAddress();

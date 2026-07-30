@@ -36,6 +36,10 @@ namespace
         MAX_PENDING_LOG_ENTRIES
     ];
 
+    PersistentLogEntry storedEntries[
+        MAX_LOG_ENTRIES
+    ];
+
     size_t pendingEntryCount = 0;
 
     String escapeLogField(
@@ -612,10 +616,6 @@ void Logger::persist(
     }
     else
     {
-        PersistentLogEntry storedEntries[
-            MAX_LOG_ENTRIES
-        ];
-
         const size_t storedCount =
             loadLogEntries(storedEntries);
 
@@ -688,12 +688,8 @@ void Logger::flushPersistentLogs()
 
     persistentWriteInProgress = true;
 
-    PersistentLogEntry entries[
-        MAX_LOG_ENTRIES
-    ];
-
     size_t entryCount =
-        loadLogEntries(entries);
+        loadLogEntries(storedEntries);
 
     for (
         size_t pendingIndex = 0;
@@ -709,21 +705,21 @@ void Logger::flushPersistentLogs()
                 index++
             )
             {
-                entries[index - 1] =
-                    entries[index];
+                storedEntries[index - 1] =
+                    storedEntries[index];
             }
 
             entryCount--;
         }
 
-        entries[entryCount] =
+        storedEntries[entryCount] =
             pendingEntries[pendingIndex];
         entryCount++;
     }
 
     if (
         rewriteLogEntries(
-            entries,
+            storedEntries,
             entryCount
         )
     )
@@ -739,13 +735,9 @@ String Logger::getPersistentLogsJson()
     enablePersistentLogging();
     flushPersistentLogs();
 
-    PersistentLogEntry entries[
-        MAX_LOG_ENTRIES
-    ];
-
     const size_t entryCount =
         persistentLoggingEnabled
-            ? loadLogEntries(entries)
+            ? loadLogEntries(storedEntries)
             : 0;
 
     String json;
@@ -774,24 +766,24 @@ String Logger::getPersistentLogsJson()
 
         json += "{\"wakeCycle\":";
         json += String(
-            entries[index].wakeCycle
+            storedEntries[index].wakeCycle
         );
         json += ",\"uptimeSeconds\":";
         json += String(
-            entries[index].uptimeSeconds
+            storedEntries[index].uptimeSeconds
         );
         json += ",\"timestamp\":";
         json += String(
-            entries[index].timestamp
+            storedEntries[index].timestamp
         );
         json += ",\"timeSource\":\"";
-        json += entries[index].timeSource;
+        json += storedEntries[index].timeSource;
         json += "\"";
         json += ",\"level\":\"";
-        json += entries[index].level;
+        json += storedEntries[index].level;
         json += "\",\"message\":\"";
         json += jsonEscape(
-            entries[index].message
+            storedEntries[index].message
         );
         json += "\"}";
     }
