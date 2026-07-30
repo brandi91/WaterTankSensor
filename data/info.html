@@ -4,20 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <title>Device &amp; Wiring</title>
+    <title>Device Info</title>
     <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <div class="page-shell info-page">
-    <header class="panel info-hero">
-        <div class="info-hero-copy">
-            <span class="info-eyebrow">ESP32 WATER TANK SENSOR</span>
-            <h1>Device &amp; Wiring</h1>
-            <p>Hardware reference, pin configuration and operating guide.</p>
-            <nav class="info-nav" aria-label="Main navigation">
-                <a class="navigation-button" href="/">Dashboard</a>
-                <a class="navigation-button" href="/logs">History &amp; Logs</a>
-            </nav>
+    <header class="site-header">
+        <a class="site-identity" href="/" aria-label="Water Tank Sensor dashboard">
+            <span class="project-label">Water Tank Sensor</span>
+            <strong>{{DEVICE_NAME}}</strong>
+        </a>
+        <nav class="top-navigation" aria-label="Main navigation">
+            <a class="nav-link" href="/">Dashboard</a>
+            <a class="nav-link" href="/logs">History &amp; Logs</a>
+            <a class="nav-link active" href="/info" aria-current="page">Device Info</a>
+        </nav>
+    </header>
+
+    <section class="page-header">
+        <div>
+            <span class="project-label">Water Tank Sensor</span>
+            <h1>Device Info</h1>
+            <p class="page-subtitle">Hardware reference, wiring and device configuration.</p>
         </div>
         <div class="info-chips" aria-label="Device summary">
             <span><small>Board</small>{{BOARD_TYPE}}</span>
@@ -25,9 +33,9 @@
             <span><small>Hostname</small>{{WIFI_HOSTNAME}}</span>
             <span><small>Interval</small>{{MEASURE_INTERVAL_SECONDS}} seconds</span>
         </div>
-    </header>
+    </section>
 
-    <main class="info-content">
+    <main class="page-content info-content">
         <section class="info-hardware-layout">
             <article class="panel info-card hardware-card">
                 <div class="info-heading">

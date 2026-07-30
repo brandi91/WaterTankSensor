@@ -34,25 +34,32 @@
          Header
          ===================================================== -->
 
-    <header class="page-header">
-        <div>
-            <h1>Water Tank Sensor</h1>
-            <p>Overview &amp; Device Status</p>
-        </div>
-
-        <div class="header-badge">
-            Firmware {{FW_VERSION}}
-        </div>
-
-        <a class="navigation-button" href="/info">Device Info</a>
+    <header class="site-header">
+        <a class="site-identity" href="/" aria-label="Water Tank Sensor dashboard">
+            <span class="project-label">Water Tank Sensor</span>
+            <strong>{{DEVICE_NAME}}</strong>
+        </a>
+        <nav class="top-navigation" aria-label="Main navigation">
+            <a class="nav-link active" href="/" aria-current="page">Dashboard</a>
+            <a class="nav-link" href="/logs">History &amp; Logs</a>
+            <a class="nav-link" href="/info">Device Info</a>
+        </nav>
     </header>
 
+    <section class="page-header">
+        <div>
+            <span class="project-label">Water Tank Sensor</span>
+            <h1>Dashboard</h1>
+            <p class="page-subtitle">Current tank, battery and connectivity status.</p>
+        </div>
+        <div class="header-badge">Firmware {{FW_VERSION}}</div>
+    </section>
 
     <!-- =====================================================
          Main dashboard
          ===================================================== -->
 
-    <main>
+    <main class="page-content">
 
         <section class="overview-grid">
 
@@ -551,9 +558,7 @@
                 <form
                     method="POST"
                     action="/sleep"
-                    onsubmit="return confirm(
-                        'Put the ESP32 into deep sleep?'
-                    );">
+                    data-confirm="Put the ESP32 into deep sleep?">
 
                     <button
                         type="submit"
@@ -597,9 +602,7 @@
                 <form
                     method="POST"
                     action="/restart"
-                    onsubmit="return confirm(
-                        'Restart the ESP32 now?'
-                    );">
+                    data-confirm="Restart the ESP32 now?">
 
                     <button
                         type="submit"
@@ -1129,9 +1132,7 @@
     method="POST"
     action="/reset-battery-estimate"
     class="battery-reset-form"
-    onsubmit="return confirm(
-        'Reset all learned battery estimate data?'
-    );">
+    data-confirm="Reset all learned battery estimate data?">
 
     <button
         type="submit"
@@ -1422,6 +1423,14 @@
     })();
 
     (function () {
+        document.querySelectorAll("form[data-confirm]").forEach(function (form) {
+            form.addEventListener("submit", function (event) {
+                if (!window.confirm(form.dataset.confirm)) {
+                    event.preventDefault();
+                }
+            });
+        });
+
         const mode = document.getElementById("networkMode");
         const dhcpPanel = document.getElementById("dhcpConfiguration");
         const manualPanel = document.getElementById("manualNetworkFields");

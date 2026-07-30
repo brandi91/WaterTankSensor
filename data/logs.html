@@ -21,42 +21,46 @@
 <body>
 <div class="page-shell">
 
-    <header class="page-header logs-header">
-        <div>
-            <span class="logs-device-name">
-                {{DEVICE_NAME}}
-            </span>
-
-            <h1>History &amp; Logs</h1>
-            <p>Persistent measurements and device events</p>
-        </div>
-
-        <div class="header-actions">
-            <a class="navigation-button" href="/">Dashboard</a>
-            <a class="navigation-button" href="/info">Info</a>
-        </div>
+    <header class="site-header">
+        <a class="site-identity" href="/" aria-label="Water Tank Sensor dashboard">
+            <span class="project-label">Water Tank Sensor</span>
+            <strong>{{DEVICE_NAME}}</strong>
+        </a>
+        <nav class="top-navigation" aria-label="Main navigation">
+            <a class="nav-link" href="/">Dashboard</a>
+            <a class="nav-link active" href="/logs" aria-current="page">History &amp; Logs</a>
+            <a class="nav-link" href="/info">Device Info</a>
+        </nav>
     </header>
 
-    <main>
+    <section class="page-header">
+        <div>
+            <span class="project-label">Water Tank Sensor</span>
+            <h1>History &amp; Logs</h1>
+            <p class="page-subtitle">Persistent measurements and device events.</p>
+        </div>
+    </section>
+
+    <main class="page-content">
 
         <section class="logs-summary-grid">
 
-            <article class="panel summary-card">
+            <article class="panel summary-card metric-card">
                 <span>Stored Measurements</span>
                 <strong id="measurementCount">0</strong>
             </article>
 
-            <article class="panel summary-card">
+            <article class="panel summary-card metric-card">
                 <span>Latest Fill</span>
                 <strong id="latestFill">—</strong>
             </article>
 
-            <article class="panel summary-card">
+            <article class="panel summary-card metric-card">
                 <span>Latest Battery</span>
                 <strong id="latestBattery">—</strong>
             </article>
 
-            <article class="panel summary-card">
+            <article class="panel summary-card metric-card">
                 <span>Latest Sensor Result</span>
                 <strong id="latestSensor">No history</strong>
             </article>
@@ -108,7 +112,7 @@
                 </div>
             </div>
 
-            <div class="table-scroll">
+            <div class="table-scroll table-wrapper">
                 <table class="history-table">
                     <thead>
                         <tr>
@@ -139,9 +143,7 @@
                 method="POST"
                 action="/clear-history"
                 class="clear-data-form"
-                onsubmit="return confirm(
-                    'Clear all stored measurement history?'
-                );">
+                data-confirm="Clear all stored measurement history?">
 
                 <button
                     type="submit"
@@ -208,9 +210,7 @@
                 method="POST"
                 action="/clear-logs"
                 class="clear-data-form"
-                onsubmit="return confirm(
-                    'Clear all persistent device logs?'
-                );">
+                data-confirm="Clear all persistent device logs?">
 
                 <button
                     type="submit"
@@ -757,6 +757,16 @@
                         renderLogs();
                     }
                 );
+            });
+
+        document
+            .querySelectorAll("form[data-confirm]")
+            .forEach((form) => {
+                form.addEventListener("submit", (event) => {
+                    if (!window.confirm(form.dataset.confirm)) {
+                        event.preventDefault();
+                    }
+                });
             });
 
         window.addEventListener(
