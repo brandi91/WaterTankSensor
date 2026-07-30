@@ -266,7 +266,18 @@ bool performMeasurement(
         "Tank measurement successful"
     );
 
-    MeasurementHistory::addCurrentMeasurement();
+    const bool historyStored =
+        MeasurementHistory::addCurrentMeasurement();
+
+    if (
+        !historyStored &&
+        !Sensor::isSimulated()
+    )
+    {
+        Logger::warning(
+            "Failed to store measurement history"
+        );
+    }
 
     BatteryEstimator::addSample(
         Battery::getVoltage(),

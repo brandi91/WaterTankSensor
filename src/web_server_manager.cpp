@@ -59,6 +59,9 @@ void WebServerManager::begin()
         Logger::info(
             "LittleFS mounted successfully"
         );
+
+        MeasurementHistory::begin();
+        Logger::enablePersistentLogging();
     }
 
     if (!routesRegistered)
@@ -416,6 +419,16 @@ void WebServerManager::handleHistoryApi()
         "no-cache, no-store, must-revalidate"
     );
 
+    server.sendHeader(
+        "Pragma",
+        "no-cache"
+    );
+
+    server.sendHeader(
+        "Expires",
+        "0"
+    );
+
     server.send(
         200,
         "application/json; charset=utf-8",
@@ -428,6 +441,16 @@ void WebServerManager::handleLogsApi()
     server.sendHeader(
         "Cache-Control",
         "no-cache, no-store, must-revalidate"
+    );
+
+    server.sendHeader(
+        "Pragma",
+        "no-cache"
+    );
+
+    server.sendHeader(
+        "Expires",
+        "0"
     );
 
     server.send(
@@ -852,8 +875,19 @@ void WebServerManager::handleMeasure()
             "Web measurement successful"
         );
 
-        MeasurementHistory::
-            addCurrentMeasurement();
+        const bool historyStored =
+            MeasurementHistory::
+                addCurrentMeasurement();
+
+        if (
+            !historyStored &&
+            !Sensor::isSimulated()
+        )
+        {
+            Logger::warning(
+                "Failed to store measurement history"
+            );
+        }
 
 #if MQTT_ENABLED
         MqttManager::publishMeasurement();
