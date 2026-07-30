@@ -23,6 +23,12 @@ struct SettingsData
     String wifiDns1;
     String wifiDns2;
 
+    String apSsid = CONFIG_AP_SSID;
+    String apPassword = CONFIG_AP_PASSWORD;
+    String apIp = CONFIG_AP_IP;
+    String apGateway = CONFIG_AP_GATEWAY;
+    String apSubnet = CONFIG_AP_SUBNET;
+
     /*
      * MQTT
      */

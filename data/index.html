@@ -744,87 +744,103 @@
                             Wi-Fi changes become active after restart.
                         </small>
 
+                        <label for="networkMode">Network Mode</label>
+                        <select id="networkMode" name="networkMode">
+                            <option value="dhcp" {{NETWORK_MODE_DHCP_SELECTED}}>DHCP (Automatic)</option>
+                            <option value="manual" {{NETWORK_MODE_MANUAL_SELECTED}}>Manual (Static)</option>
+                        </select>
+
+                        <div
+                            id="dhcpConfiguration"
+                            class="network-mode-panel"
+                            data-ip="{{LAST_DHCP_IP}}"
+                            data-gateway="{{LAST_DHCP_GATEWAY}}"
+                            data-subnet="{{LAST_DHCP_SUBNET}}"
+                            data-dns1="{{LAST_DHCP_DNS_1}}"
+                            data-dns2="{{LAST_DHCP_DNS_2}}">
+                            <strong>Current DHCP Configuration</strong>
+                            <dl class="network-value-list">
+                                <div><dt>IP address</dt><dd>{{LAST_DHCP_IP}}</dd></div>
+                                <div><dt>Gateway</dt><dd>{{LAST_DHCP_GATEWAY}}</dd></div>
+                                <div><dt>Subnet mask</dt><dd>{{LAST_DHCP_SUBNET}}</dd></div>
+                                <div><dt>DNS 1</dt><dd>{{LAST_DHCP_DNS_1}}</dd></div>
+                                <div><dt>DNS 2</dt><dd>{{LAST_DHCP_DNS_2}}</dd></div>
+                            </dl>
+                        </div>
+
+                        <div id="manualNetworkFields" class="manual-network-fields">
+                            <button id="useDhcpValues" class="secondary-inline-button" type="button">
+                                Use Current DHCP Values
+                            </button>
+
+                            <label for="wifiStaticIp">Static IP</label>
+                            <input id="wifiStaticIp" name="wifiStaticIp" type="text"
+                                inputmode="decimal" placeholder="192.168.1.50"
+                                value="{{WIFI_STATIC_IP}}">
+
+                            <label for="wifiGateway">Gateway</label>
+                            <input id="wifiGateway" name="wifiGateway" type="text"
+                                inputmode="decimal" placeholder="192.168.1.1"
+                                value="{{WIFI_GATEWAY}}">
+
+                            <label for="wifiSubnet">Subnet Mask</label>
+                            <input id="wifiSubnet" name="wifiSubnet" type="text"
+                                inputmode="decimal" placeholder="255.255.255.0"
+                                value="{{WIFI_SUBNET}}">
+
+                            <label for="wifiDns1">DNS 1 (optional)</label>
+                            <input id="wifiDns1" name="wifiDns1" type="text"
+                                inputmode="decimal" placeholder="192.168.1.1"
+                                value="{{WIFI_DNS_1}}">
+
+                            <label for="wifiDns2">DNS 2 (optional)</label>
+                            <input id="wifiDns2" name="wifiDns2" type="text"
+                                inputmode="decimal" placeholder="1.1.1.1"
+                                value="{{WIFI_DNS_2}}">
+                        </div>
+
+                    </section>
+
+                    <section class="settings-card">
+                        <h3>Access Point Configuration</h3>
+
+                        <label for="apSsid">AP Name / SSID</label>
+                        <input id="apSsid" name="apSsid" type="text"
+                            maxlength="32" value="{{AP_SSID}}" required>
+
+                        <label for="apPassword">AP Password</label>
+                        <input id="apPassword" name="apPassword" type="password"
+                            minlength="8" maxlength="63" autocomplete="new-password"
+                            placeholder="Leave blank to keep unchanged">
+                        <small class="field-help">Leave blank to keep the current password.</small>
+
                         <label class="switch-row">
-
-                            <span>Use DHCP</span>
-
+                            <span>Create open access point</span>
                             <span class="switch-control">
-                                <input
-                                    type="checkbox"
-                                    name="wifiDhcp"
-                                    value="1"
-                                    {{WIFI_DHCP_CHECKED}}>
-
+                                <input id="apOpen" name="apOpen" type="checkbox" value="1">
                                 <span class="switch-slider"></span>
                             </span>
-
                         </label>
+                        <div id="openApWarning" class="open-ap-warning" hidden>
+                            Open access point: anyone nearby can connect.
+                        </div>
 
-                        <label for="wifiStaticIp">
-                            Static IP
-                        </label>
+                        <label for="apIp">AP IP Address</label>
+                        <input id="apIp" name="apIp" type="text"
+                            inputmode="decimal" value="{{AP_IP}}" required>
 
-                        <input
-                            id="wifiStaticIp"
-                            name="wifiStaticIp"
-                            type="text"
-                            inputmode="decimal"
-                            placeholder="192.168.1.50"
-                            value="{{WIFI_STATIC_IP}}">
+                        <label for="apGateway">AP Gateway</label>
+                        <input id="apGateway" name="apGateway" type="text"
+                            inputmode="decimal" value="{{AP_GATEWAY}}"
+                            placeholder="Defaults to AP IP">
 
-                        <label for="wifiGateway">
-                            Gateway
-                        </label>
-
-                        <input
-                            id="wifiGateway"
-                            name="wifiGateway"
-                            type="text"
-                            inputmode="decimal"
-                            placeholder="192.168.1.1"
-                            value="{{WIFI_GATEWAY}}">
-
-                        <label for="wifiSubnet">
-                            Subnet Mask
-                        </label>
-
-                        <input
-                            id="wifiSubnet"
-                            name="wifiSubnet"
-                            type="text"
-                            inputmode="decimal"
-                            placeholder="255.255.255.0"
-                            value="{{WIFI_SUBNET}}">
-
-                        <label for="wifiDns1">
-                            DNS 1
-                        </label>
-
-                        <input
-                            id="wifiDns1"
-                            name="wifiDns1"
-                            type="text"
-                            inputmode="decimal"
-                            placeholder="192.168.1.1"
-                            value="{{WIFI_DNS_1}}">
-
-                        <label for="wifiDns2">
-                            DNS 2
-                        </label>
-
-                        <input
-                            id="wifiDns2"
-                            name="wifiDns2"
-                            type="text"
-                            inputmode="decimal"
-                            placeholder="1.1.1.1"
-                            value="{{WIFI_DNS_2}}">
+                        <label for="apSubnet">AP Subnet Mask</label>
+                        <input id="apSubnet" name="apSubnet" type="text"
+                            inputmode="decimal" value="{{AP_SUBNET}}" required>
 
                         <small class="field-help">
-                            When DHCP is disabled, all five IPv4
-                            fields must be valid.
+                            Access point changes take effect after restart.
                         </small>
-
                     </section>
 
 
@@ -1403,6 +1419,69 @@
             refreshStatus,
             5000
         );
+    })();
+
+    (function () {
+        const mode = document.getElementById("networkMode");
+        const dhcpPanel = document.getElementById("dhcpConfiguration");
+        const manualPanel = document.getElementById("manualNetworkFields");
+        const copyButton = document.getElementById("useDhcpValues");
+        const apOpen = document.getElementById("apOpen");
+        const apPassword = document.getElementById("apPassword");
+        const openWarning = document.getElementById("openApWarning");
+
+        const manualFields = {
+            ip: document.getElementById("wifiStaticIp"),
+            gateway: document.getElementById("wifiGateway"),
+            subnet: document.getElementById("wifiSubnet"),
+            dns1: document.getElementById("wifiDns1"),
+            dns2: document.getElementById("wifiDns2")
+        };
+
+        function available(value) {
+            return value && value !== "-" && value !== "0.0.0.0";
+        }
+
+        function copyDhcpValues(onlyEmpty) {
+            Object.keys(manualFields).forEach(function (key) {
+                const field = manualFields[key];
+                const value = dhcpPanel.dataset[key];
+                if (field && available(value) && (!onlyEmpty || !field.value.trim())) {
+                    field.value = value;
+                }
+            });
+        }
+
+        function updateNetworkMode(prefill) {
+            const manual = mode.value === "manual";
+            manualPanel.hidden = !manual;
+            dhcpPanel.classList.toggle("network-panel-muted", manual);
+            if (manual && prefill) {
+                copyDhcpValues(true);
+            }
+        }
+
+        mode.addEventListener("change", function () {
+            updateNetworkMode(true);
+        });
+
+        copyButton.addEventListener("click", function () {
+            mode.value = "manual";
+            updateNetworkMode(false);
+            copyDhcpValues(false);
+        });
+
+        function updateApSecurity() {
+            apPassword.disabled = apOpen.checked;
+            openWarning.hidden = !apOpen.checked;
+            if (apOpen.checked) {
+                apPassword.value = "";
+            }
+        }
+
+        apOpen.addEventListener("change", updateApSecurity);
+        updateNetworkMode(false);
+        updateApSecurity();
     })();
 </script>
 

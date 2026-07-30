@@ -21,6 +21,142 @@
 #include "mqtt_manager.h"
 #endif
 
+namespace
+{
+bool parseIpv4(const String& text, IPAddress& address)
+{
+    return !text.isEmpty() && address.fromString(text);
+}
+
+bool isValidSubnet(const IPAddress& address)
+{
+    uint32_t mask = 0;
+    for (uint8_t index = 0; index < 4; ++index)
+    {
+        mask = (mask << 8) | address[index];
+    }
+    const uint32_t inverse = ~mask;
+    return mask != 0 && (inverse & (inverse + 1U)) == 0;
+}
+
+bool validateNetworkSettings(
+    SettingsData& candidate,
+    String& error
+)
+{
+    if (candidate.wifiDhcp)
+    {
+        return true;
+    }
+
+    IPAddress staticIp;
+    IPAddress gateway;
+    IPAddress subnet;
+    IPAddress dns;
+
+    if (!parseIpv4(candidate.wifiStaticIp, staticIp))
+    {
+        error = "Manual Static IP must be a valid IPv4 address.";
+        return false;
+    }
+    if (!parseIpv4(candidate.wifiGateway, gateway))
+    {
+        error = "Manual Gateway must be a valid IPv4 address.";
+        return false;
+    }
+    if (
+        !parseIpv4(candidate.wifiSubnet, subnet) ||
+        !isValidSubnet(subnet)
+    )
+    {
+        error = "Manual Subnet Mask must be a valid contiguous subnet mask.";
+        return false;
+    }
+    if (!candidate.wifiDns1.isEmpty() && !parseIpv4(candidate.wifiDns1, dns))
+    {
+        error = "DNS 1 must be empty or a valid IPv4 address.";
+        return false;
+    }
+    if (!candidate.wifiDns2.isEmpty() && !parseIpv4(candidate.wifiDns2, dns))
+    {
+        error = "DNS 2 must be empty or a valid IPv4 address.";
+        return false;
+    }
+
+    if (candidate.wifiDns1.isEmpty() && !candidate.wifiDns2.isEmpty())
+    {
+        candidate.wifiDns1 = candidate.wifiDns2;
+        candidate.wifiDns2 = "";
+    }
+    return true;
+}
+
+bool validateApSettings(
+    SettingsData& candidate,
+    String& error
+)
+{
+    if (candidate.apSsid.isEmpty() || candidate.apSsid.length() > 32)
+    {
+        error = "Access point SSID must contain 1 to 32 characters.";
+        return false;
+    }
+    if (
+        !candidate.apPassword.isEmpty() &&
+        (
+            candidate.apPassword.length() < 8 ||
+            candidate.apPassword.length() > 63
+        )
+    )
+    {
+        error = "Access point password must contain 8 to 63 characters.";
+        return false;
+    }
+
+    if (candidate.apGateway.isEmpty())
+    {
+        candidate.apGateway = candidate.apIp;
+    }
+
+    IPAddress apIp;
+    IPAddress gateway;
+    IPAddress subnet;
+    if (
+        !parseIpv4(candidate.apIp, apIp) ||
+        apIp == IPAddress(0, 0, 0, 0)
+    )
+    {
+        error = "Access point IP must be a valid non-zero IPv4 address.";
+        return false;
+    }
+    if (!parseIpv4(candidate.apGateway, gateway))
+    {
+        error = "Access point Gateway must be a valid IPv4 address.";
+        return false;
+    }
+    if (
+        !parseIpv4(candidate.apSubnet, subnet) ||
+        !isValidSubnet(subnet)
+    )
+    {
+        error = "Access point Subnet Mask must be a valid contiguous subnet mask.";
+        return false;
+    }
+    return true;
+}
+
+SettingsData defaultApSettings()
+{
+    SettingsData defaults;
+    defaults.apSsid = CONFIG_AP_SSID;
+    defaults.apPassword = CONFIG_AP_PASSWORD;
+    defaults.apIp = CONFIG_AP_IP;
+    defaults.apGateway = CONFIG_AP_GATEWAY;
+    defaults.apSubnet = CONFIG_AP_SUBNET;
+    return defaults;
+}
+}
+
 WebServer WebServerManager::server(
     WEB_SERVER_PORT
 );
@@ -120,10 +256,36 @@ void WebServerManager::beginConfigPortal()
 
     WiFi.mode(WIFI_AP_STA);
 
-    const bool started = WiFi.softAP(
-        CONFIG_AP_SSID,
-        CONFIG_AP_PASSWORD
-    );
+    SettingsData apSettings = Settings::data;
+    String apError;
+    if (!validateApSettings(apSettings, apError))
+    {
+        Logger::warning(
+            "Invalid saved access point settings; using compile-time defaults"
+        );
+        apSettings = defaultApSettings();
+    }
+
+    IPAddress apIp;
+    IPAddress apGateway;
+    IPAddress apSubnet;
+    apIp.fromString(apSettings.apIp);
+    apGateway.fromString(apSettings.apGateway);
+    apSubnet.fromString(apSettings.apSubnet);
+
+    if (!WiFi.softAPConfig(apIp, apGateway, apSubnet))
+    {
+        Logger::warning(
+            "Failed to configure access point network; using framework defaults"
+        );
+    }
+
+    const bool started = apSettings.apPassword.isEmpty()
+        ? WiFi.softAP(apSettings.apSsid.c_str())
+        : WiFi.softAP(
+            apSettings.apSsid.c_str(),
+            apSettings.apPassword.c_str()
+        );
 
     if (!started)
     {
@@ -138,7 +300,7 @@ void WebServerManager::beginConfigPortal()
 
     Logger::info(
         "Configuration Wi-Fi: " +
-        String(CONFIG_AP_SSID)
+        apSettings.apSsid
     );
 
     Logger::info(
@@ -711,6 +873,74 @@ void WebServerManager::handleSave()
         return;
     }
 
+    SettingsData networkCandidate = Settings::data;
+    if (server.hasArg("networkMode"))
+    {
+        const String networkMode = server.arg("networkMode");
+        if (networkMode != "dhcp" && networkMode != "manual")
+        {
+            server.send(400, "text/plain; charset=utf-8", "Invalid network mode.");
+            return;
+        }
+        networkCandidate.wifiDhcp = networkMode == "dhcp";
+    }
+    networkCandidate.wifiStaticIp = server.arg("wifiStaticIp");
+    networkCandidate.wifiGateway = server.arg("wifiGateway");
+    networkCandidate.wifiSubnet = server.arg("wifiSubnet");
+    networkCandidate.wifiDns1 = server.arg("wifiDns1");
+    networkCandidate.wifiDns2 = server.arg("wifiDns2");
+
+    networkCandidate.apSsid = server.arg("apSsid");
+    networkCandidate.apIp = server.arg("apIp");
+    networkCandidate.apGateway = server.arg("apGateway");
+    networkCandidate.apSubnet = server.arg("apSubnet");
+
+    const bool openAccessPoint = server.hasArg("apOpen");
+    const String submittedApPassword = server.arg("apPassword");
+    if (openAccessPoint)
+    {
+        networkCandidate.apPassword = "";
+    }
+    else if (!submittedApPassword.isEmpty())
+    {
+        networkCandidate.apPassword = submittedApPassword;
+    }
+    else if (networkCandidate.apPassword.isEmpty())
+    {
+        server.send(
+            400,
+            "text/plain; charset=utf-8",
+            "Enter an access point password or explicitly select open access point."
+        );
+        return;
+    }
+
+    String networkError;
+    if (!validateNetworkSettings(networkCandidate, networkError))
+    {
+        Logger::warning("Network configuration rejected");
+        server.send(400, "text/plain; charset=utf-8", networkError);
+        return;
+    }
+    if (!validateApSettings(networkCandidate, networkError))
+    {
+        Logger::warning("Access point configuration rejected");
+        server.send(400, "text/plain; charset=utf-8", networkError);
+        return;
+    }
+
+    Settings::data.wifiDhcp = networkCandidate.wifiDhcp;
+    Settings::data.wifiStaticIp = networkCandidate.wifiStaticIp;
+    Settings::data.wifiGateway = networkCandidate.wifiGateway;
+    Settings::data.wifiSubnet = networkCandidate.wifiSubnet;
+    Settings::data.wifiDns1 = networkCandidate.wifiDns1;
+    Settings::data.wifiDns2 = networkCandidate.wifiDns2;
+    Settings::data.apSsid = networkCandidate.apSsid;
+    Settings::data.apPassword = networkCandidate.apPassword;
+    Settings::data.apIp = networkCandidate.apIp;
+    Settings::data.apGateway = networkCandidate.apGateway;
+    Settings::data.apSubnet = networkCandidate.apSubnet;
+
     if (server.hasArg("deviceName"))
     {
         const String deviceName =
@@ -739,39 +969,6 @@ void WebServerManager::handleSave()
             Settings::data.wifiPassword =
                 newWifiPassword;
         }
-    }
-
-    Settings::data.wifiDhcp =
-        server.hasArg("wifiDhcp");
-
-    if (server.hasArg("wifiStaticIp"))
-    {
-        Settings::data.wifiStaticIp =
-            server.arg("wifiStaticIp");
-    }
-
-    if (server.hasArg("wifiGateway"))
-    {
-        Settings::data.wifiGateway =
-            server.arg("wifiGateway");
-    }
-
-    if (server.hasArg("wifiSubnet"))
-    {
-        Settings::data.wifiSubnet =
-            server.arg("wifiSubnet");
-    }
-
-    if (server.hasArg("wifiDns1"))
-    {
-        Settings::data.wifiDns1 =
-            server.arg("wifiDns1");
-    }
-
-    if (server.hasArg("wifiDns2"))
-    {
-        Settings::data.wifiDns2 =
-            server.arg("wifiDns2");
     }
 
     Settings::data.mqttEnabled =
@@ -1781,6 +1978,14 @@ void WebServerManager::processTemplate(
             ? "checked"
             : ""
     );
+    page.replace(
+        "{{NETWORK_MODE_DHCP_SELECTED}}",
+        Settings::data.wifiDhcp ? "selected" : ""
+    );
+    page.replace(
+        "{{NETWORK_MODE_MANUAL_SELECTED}}",
+        Settings::data.wifiDhcp ? "" : "selected"
+    );
 
     page.replace(
         "{{WIFI_STATIC_IP}}",
@@ -1843,6 +2048,42 @@ void WebServerManager::processTemplate(
         WifiManager::isConnected()
             ? WifiManager::getDnsAddress(1)
             : "-"
+    );
+
+    const String suggestedDhcpIp =
+        WifiManager::getLastDhcpIp().isEmpty()
+            ? WifiManager::getIpAddress()
+            : WifiManager::getLastDhcpIp();
+    const String suggestedDhcpGateway =
+        WifiManager::getLastDhcpGateway().isEmpty()
+            ? WifiManager::getGatewayAddress()
+            : WifiManager::getLastDhcpGateway();
+    const String suggestedDhcpSubnet =
+        WifiManager::getLastDhcpSubnet().isEmpty()
+            ? WifiManager::getSubnetMask()
+            : WifiManager::getLastDhcpSubnet();
+    const String suggestedDhcpDns1 =
+        WifiManager::getLastDhcpDns1().isEmpty()
+            ? WifiManager::getDnsAddress(0)
+            : WifiManager::getLastDhcpDns1();
+    const String suggestedDhcpDns2 =
+        WifiManager::getLastDhcpDns2().isEmpty()
+            ? WifiManager::getDnsAddress(1)
+            : WifiManager::getLastDhcpDns2();
+
+    page.replace("{{LAST_DHCP_IP}}", suggestedDhcpIp);
+    page.replace("{{LAST_DHCP_GATEWAY}}", suggestedDhcpGateway);
+    page.replace("{{LAST_DHCP_SUBNET}}", suggestedDhcpSubnet);
+    page.replace("{{LAST_DHCP_DNS_1}}", suggestedDhcpDns1);
+    page.replace("{{LAST_DHCP_DNS_2}}", suggestedDhcpDns2);
+
+    page.replace("{{AP_SSID}}", htmlEscape(Settings::data.apSsid));
+    page.replace("{{AP_IP}}", htmlEscape(Settings::data.apIp));
+    page.replace("{{AP_GATEWAY}}", htmlEscape(Settings::data.apGateway));
+    page.replace("{{AP_SUBNET}}", htmlEscape(Settings::data.apSubnet));
+    page.replace(
+        "{{AP_SECURITY}}",
+        Settings::data.apPassword.isEmpty() ? "Open" : "Protected"
     );
 
     page.replace(

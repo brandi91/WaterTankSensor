@@ -185,6 +185,9 @@
 
 #define CONFIG_AP_SSID "WaterTankSensor-Setup"
 #define CONFIG_AP_PASSWORD "watertank"
+#define CONFIG_AP_IP "192.168.4.1"
+#define CONFIG_AP_GATEWAY "192.168.4.1"
+#define CONFIG_AP_SUBNET "255.255.255.0"
 
 
 /*

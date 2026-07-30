@@ -41,6 +41,11 @@ namespace
 
     constexpr const char* KEY_WIFI_DNS_2 =
         "dns2";
+    constexpr const char* KEY_AP_SSID = "apSsid";
+    constexpr const char* KEY_AP_PASSWORD = "apPass";
+    constexpr const char* KEY_AP_IP = "apIp";
+    constexpr const char* KEY_AP_GATEWAY = "apGateway";
+    constexpr const char* KEY_AP_SUBNET = "apSubnet";
 
     constexpr const char* KEY_MQTT_SERVER =
         "mqtt";
@@ -452,6 +457,22 @@ void Settings::load()
             DEFAULT_MEASURE_INTERVAL
         );
 
+    data.apSsid = preferences.isKey(KEY_AP_SSID)
+        ? preferences.getString(KEY_AP_SSID)
+        : CONFIG_AP_SSID;
+    data.apPassword = preferences.isKey(KEY_AP_PASSWORD)
+        ? preferences.getString(KEY_AP_PASSWORD)
+        : CONFIG_AP_PASSWORD;
+    data.apIp = preferences.isKey(KEY_AP_IP)
+        ? preferences.getString(KEY_AP_IP)
+        : CONFIG_AP_IP;
+    data.apGateway = preferences.isKey(KEY_AP_GATEWAY)
+        ? preferences.getString(KEY_AP_GATEWAY)
+        : CONFIG_AP_GATEWAY;
+    data.apSubnet = preferences.isKey(KEY_AP_SUBNET)
+        ? preferences.getString(KEY_AP_SUBNET)
+        : CONFIG_AP_SUBNET;
+
 if (
     data.measureInterval == 0 ||
     data.measureInterval > 86400UL
@@ -638,6 +659,12 @@ void Settings::save()
         KEY_WIFI_DNS_2,
         data.wifiDns2
     );
+
+    preferences.putString(KEY_AP_SSID, data.apSsid);
+    preferences.putString(KEY_AP_PASSWORD, data.apPassword);
+    preferences.putString(KEY_AP_IP, data.apIp);
+    preferences.putString(KEY_AP_GATEWAY, data.apGateway);
+    preferences.putString(KEY_AP_SUBNET, data.apSubnet);
 
 
     /*
