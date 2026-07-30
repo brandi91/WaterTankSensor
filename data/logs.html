@@ -23,19 +23,19 @@
 
     <header class="site-header">
         <a class="site-identity" href="/" aria-label="Water Tank Sensor dashboard">
-            <span class="project-label">Water Tank Sensor</span>
             <strong>{{DEVICE_NAME}}</strong>
+            <small>ESP32 Tank Monitor</small>
         </a>
         <nav class="top-navigation" aria-label="Main navigation">
             <a class="nav-link" href="/">Dashboard</a>
             <a class="nav-link active" href="/logs" aria-current="page">History &amp; Logs</a>
             <a class="nav-link" href="/info">Device Info</a>
+            {{LOGOUT_CONTROL}}
         </nav>
     </header>
 
     <section class="page-header">
         <div>
-            <span class="project-label">Water Tank Sensor</span>
             <h1>History &amp; Logs</h1>
             <p class="page-subtitle">Persistent measurements and device events.</p>
         </div>

@@ -30,6 +30,14 @@ struct SettingsData
     String apSubnet = CONFIG_AP_SUBNET;
 
     /*
+     * Optional local web access barrier.
+     */
+    bool webLoginEnabled = false;
+    String webUsername = "admin";
+    String webPassword;
+    uint16_t webSessionTimeoutMinutes = 30;
+
+    /*
      * MQTT
      */
     String mqttServer;

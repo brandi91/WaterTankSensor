@@ -46,6 +46,10 @@ namespace
     constexpr const char* KEY_AP_IP = "apIp";
     constexpr const char* KEY_AP_GATEWAY = "apGateway";
     constexpr const char* KEY_AP_SUBNET = "apSubnet";
+    constexpr const char* KEY_WEB_LOGIN_ENABLED = "webLogin";
+    constexpr const char* KEY_WEB_USERNAME = "webUser";
+    constexpr const char* KEY_WEB_PASSWORD = "webPass";
+    constexpr const char* KEY_WEB_SESSION_TIMEOUT = "webTimeout";
 
     constexpr const char* KEY_MQTT_SERVER =
         "mqtt";
@@ -472,6 +476,46 @@ void Settings::load()
     data.apSubnet = preferences.isKey(KEY_AP_SUBNET)
         ? preferences.getString(KEY_AP_SUBNET)
         : CONFIG_AP_SUBNET;
+    data.webLoginEnabled = preferences.isKey(KEY_WEB_LOGIN_ENABLED)
+        ? preferences.getBool(KEY_WEB_LOGIN_ENABLED)
+        : false;
+    data.webUsername = preferences.isKey(KEY_WEB_USERNAME)
+        ? preferences.getString(KEY_WEB_USERNAME)
+        : "admin";
+    data.webPassword = preferences.isKey(KEY_WEB_PASSWORD)
+        ? preferences.getString(KEY_WEB_PASSWORD)
+        : "";
+    data.webSessionTimeoutMinutes =
+        preferences.isKey(KEY_WEB_SESSION_TIMEOUT)
+            ? preferences.getUShort(KEY_WEB_SESSION_TIMEOUT)
+            : 30;
+    data.webUsername.trim();
+    if (
+        data.webUsername.isEmpty() ||
+        data.webUsername.length() > 32
+    )
+    {
+        data.webUsername = "admin";
+    }
+    if (data.webPassword.length() > 64)
+    {
+        data.webPassword = "";
+        data.webLoginEnabled = false;
+    }
+    if (
+        data.webSessionTimeoutMinutes < 1 ||
+        data.webSessionTimeoutMinutes > 1440
+    )
+    {
+        data.webSessionTimeoutMinutes = 30;
+    }
+    if (
+        data.webLoginEnabled &&
+        data.webPassword.length() < 4
+    )
+    {
+        data.webLoginEnabled = false;
+    }
 
 if (
     data.measureInterval == 0 ||
@@ -665,6 +709,13 @@ void Settings::save()
     preferences.putString(KEY_AP_IP, data.apIp);
     preferences.putString(KEY_AP_GATEWAY, data.apGateway);
     preferences.putString(KEY_AP_SUBNET, data.apSubnet);
+    preferences.putBool(KEY_WEB_LOGIN_ENABLED, data.webLoginEnabled);
+    preferences.putString(KEY_WEB_USERNAME, data.webUsername);
+    preferences.putString(KEY_WEB_PASSWORD, data.webPassword);
+    preferences.putUShort(
+        KEY_WEB_SESSION_TIMEOUT,
+        data.webSessionTimeoutMinutes
+    );
 
 
     /*

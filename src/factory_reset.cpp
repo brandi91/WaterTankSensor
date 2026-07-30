@@ -9,6 +9,7 @@
 #include "measurement_history.h"
 #include "settings.h"
 #include "time_manager.h"
+#include "web_server_manager.h"
 
 namespace
 {
@@ -23,6 +24,7 @@ void FactoryReset::execute()
     );
     Logger::flushPersistentLogs();
 
+    WebServerManager::invalidateAuthenticationSession();
     Settings::reset();
     BatteryEstimator::reset();
     TimeManager::resetPersistedState();

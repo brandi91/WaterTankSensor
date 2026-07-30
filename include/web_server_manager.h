@@ -13,6 +13,7 @@ public:
 
     static bool isRunning();
     static bool isConfigPortalActive();
+    static void invalidateAuthenticationSession();
 
 private:
     static WebServer server;
@@ -33,9 +34,15 @@ private:
      * die über den Web-Messbutton entstehen.
      */
     static unsigned long lastBatteryEstimatorSampleAt;
+    static bool sessionActive;
+    static String sessionToken;
+    static unsigned long sessionLastActiveAt;
 
     static void registerRoutes();
 
+    static void handleLoginGet();
+    static void handleLoginPost();
+    static void handleLogout();
     static void handleRoot();
     static void handleInfo();
     static void handleLogs();
@@ -53,6 +60,20 @@ private:
     static void handleSleep();
     static void handleRestart();
     static void handleNotFound();
+    static bool requireAuthentication(bool apiRequest = false);
+    static bool hasValidSession(bool refreshActivity = true);
+    static void invalidateSession();
+    static String createSessionToken();
+    static bool constantTimeEquals(
+        const String& left,
+        const String& right
+    );
+    static String safeRedirect(const String& requested);
+    static String urlEncode(const String& value);
+    static void sendLoginPage(
+        const String& error,
+        const String& redirectTarget
+    );
 
     static void sendTemplate(
         const String& path

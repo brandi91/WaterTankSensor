@@ -3,6 +3,7 @@
 #include <WiFi.h>
 #include <LittleFS.h>
 #include <math.h>
+#include <esp_system.h>
 
 #include "battery.h"
 #include "battery_estimator.h"
@@ -178,6 +179,9 @@ unsigned long WebServerManager::sleepAt = 0;
  */
 unsigned long
     WebServerManager::lastBatteryEstimatorSampleAt = 0;
+bool WebServerManager::sessionActive = false;
+String WebServerManager::sessionToken;
+unsigned long WebServerManager::sessionLastActiveAt = 0;
 
 void WebServerManager::begin()
 {
@@ -387,8 +391,35 @@ bool WebServerManager::isConfigPortalActive()
 {
     return configPortalActive;
 }
+
+void WebServerManager::invalidateAuthenticationSession()
+{
+    invalidateSession();
+}
+
 void WebServerManager::registerRoutes()
 {
+    const char* collectedHeaders[] = {"Cookie"};
+    server.collectHeaders(collectedHeaders, 1);
+
+    server.on(
+        "/login",
+        HTTP_GET,
+        handleLoginGet
+    );
+
+    server.on(
+        "/login",
+        HTTP_POST,
+        handleLoginPost
+    );
+
+    server.on(
+        "/logout",
+        HTTP_POST,
+        handleLogout
+    );
+
     server.on(
         "/",
         HTTP_GET,
@@ -550,8 +581,324 @@ server.on(
         handleNotFound
     );
 }
+
+void WebServerManager::handleLoginGet()
+{
+    const String redirectTarget = safeRedirect(
+        server.hasArg("redirect") ? server.arg("redirect") : "/"
+    );
+
+    if (
+        !Settings::data.webLoginEnabled ||
+        configPortalActive ||
+        hasValidSession()
+    )
+    {
+        server.sendHeader("Location", redirectTarget, true);
+        server.send(302, "text/plain", "");
+        return;
+    }
+
+    sendLoginPage("", redirectTarget);
+}
+
+void WebServerManager::handleLoginPost()
+{
+    const String redirectTarget = safeRedirect(server.arg("redirect"));
+
+    if (!Settings::data.webLoginEnabled || configPortalActive)
+    {
+        server.sendHeader("Location", redirectTarget, true);
+        server.send(302, "text/plain", "");
+        return;
+    }
+
+    const bool usernameValid = constantTimeEquals(
+        server.arg("username"),
+        Settings::data.webUsername
+    );
+    const bool passwordValid = constantTimeEquals(
+        server.arg("password"),
+        Settings::data.webPassword
+    );
+    const bool valid = usernameValid & passwordValid;
+
+    if (!valid)
+    {
+        // Deliberately generic: never identify which credential was wrong.
+        sendLoginPage(
+            "Invalid username or password.",
+            redirectTarget
+        );
+        return;
+    }
+
+    invalidateSession();
+    sessionToken = createSessionToken();
+    sessionActive = !sessionToken.isEmpty();
+    sessionLastActiveAt = millis();
+
+    if (!sessionActive)
+    {
+        server.send(
+            500,
+            "text/plain; charset=utf-8",
+            "Unable to create a web session."
+        );
+        return;
+    }
+
+    server.sendHeader(
+        "Set-Cookie",
+        "WTSSESSION=" + sessionToken +
+            "; Path=/; HttpOnly; SameSite=Strict"
+    );
+    server.sendHeader("Location", redirectTarget, true);
+    server.send(302, "text/plain", "");
+}
+
+void WebServerManager::handleLogout()
+{
+    invalidateSession();
+    server.sendHeader(
+        "Set-Cookie",
+        "WTSSESSION=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0"
+    );
+    server.sendHeader("Location", "/login", true);
+    server.send(302, "text/plain", "");
+}
+
+bool WebServerManager::requireAuthentication(const bool apiRequest)
+{
+    if (
+        !Settings::data.webLoginEnabled ||
+        configPortalActive
+    )
+    {
+        /*
+         * Recovery/configuration AP intentionally bypasses web login so a
+         * forgotten credential can never disable physical GPIO 33 recovery.
+         */
+        return true;
+    }
+
+    if (hasValidSession())
+    {
+        return true;
+    }
+
+    if (apiRequest || server.method() != HTTP_GET)
+    {
+        if (apiRequest)
+        {
+            server.send(
+                401,
+                "application/json; charset=utf-8",
+                "{\"error\":\"authentication required\"}"
+            );
+        }
+        else
+        {
+            server.send(
+                401,
+                "text/plain; charset=utf-8",
+                "Authentication required."
+            );
+        }
+        return false;
+    }
+
+    const String target = safeRedirect(server.uri());
+    server.sendHeader(
+        "Location",
+        "/login?redirect=" + urlEncode(target),
+        true
+    );
+    server.send(302, "text/plain", "");
+    return false;
+}
+
+bool WebServerManager::hasValidSession(const bool refreshActivity)
+{
+    if (!sessionActive || sessionToken.isEmpty())
+    {
+        return false;
+    }
+
+    const uint32_t timeoutMs =
+        static_cast<uint32_t>(
+            Settings::data.webSessionTimeoutMinutes
+        ) * 60000UL;
+    if (millis() - sessionLastActiveAt >= timeoutMs)
+    {
+        invalidateSession();
+        return false;
+    }
+
+    const String cookieHeader = server.header("Cookie");
+    const String cookiePrefix = "WTSSESSION=";
+    int start = cookieHeader.indexOf(cookiePrefix);
+    if (start < 0)
+    {
+        return false;
+    }
+    start += cookiePrefix.length();
+    int end = cookieHeader.indexOf(';', start);
+    if (end < 0)
+    {
+        end = cookieHeader.length();
+    }
+
+    const String submitted = cookieHeader.substring(start, end);
+    if (!constantTimeEquals(submitted, sessionToken))
+    {
+        return false;
+    }
+
+    if (refreshActivity)
+    {
+        sessionLastActiveAt = millis();
+    }
+    return true;
+}
+
+void WebServerManager::invalidateSession()
+{
+    sessionActive = false;
+    sessionToken = "";
+    sessionLastActiveAt = 0;
+}
+
+String WebServerManager::createSessionToken()
+{
+    static const char hex[] = "0123456789abcdef";
+    String token;
+    token.reserve(64);
+    for (uint8_t index = 0; index < 8; ++index)
+    {
+        const uint32_t randomValue = esp_random();
+        for (int8_t shift = 28; shift >= 0; shift -= 4)
+        {
+            token += hex[(randomValue >> shift) & 0x0f];
+        }
+    }
+    return token;
+}
+
+bool WebServerManager::constantTimeEquals(
+    const String& left,
+    const String& right
+)
+{
+    const size_t maximumLength = max(left.length(), right.length());
+    size_t difference = left.length() ^ right.length();
+    for (size_t index = 0; index < maximumLength; ++index)
+    {
+        const uint8_t leftByte =
+            index < left.length() ? left[index] : 0;
+        const uint8_t rightByte =
+            index < right.length() ? right[index] : 0;
+        difference |= leftByte ^ rightByte;
+    }
+    return difference == 0;
+}
+
+String WebServerManager::safeRedirect(const String& requested)
+{
+    if (
+        requested.isEmpty() ||
+        requested.length() > 128 ||
+        requested[0] != '/' ||
+        requested.startsWith("//") ||
+        requested.indexOf('\\') >= 0 ||
+        requested.indexOf("://") >= 0 ||
+        requested.indexOf('\r') >= 0 ||
+        requested.indexOf('\n') >= 0
+    )
+    {
+        return "/";
+    }
+    return requested;
+}
+
+String WebServerManager::urlEncode(const String& value)
+{
+    static const char hex[] = "0123456789ABCDEF";
+    String encoded;
+    encoded.reserve(value.length() * 3);
+    for (size_t index = 0; index < value.length(); ++index)
+    {
+        const uint8_t character = value[index];
+        if (
+            (character >= 'a' && character <= 'z') ||
+            (character >= 'A' && character <= 'Z') ||
+            (character >= '0' && character <= '9') ||
+            character == '-' ||
+            character == '_' ||
+            character == '.' ||
+            character == '~'
+        )
+        {
+            encoded += static_cast<char>(character);
+        }
+        else
+        {
+            encoded += '%';
+            encoded += hex[character >> 4];
+            encoded += hex[character & 0x0f];
+        }
+    }
+    return encoded;
+}
+
+void WebServerManager::sendLoginPage(
+    const String& error,
+    const String& redirectTarget
+)
+{
+    if (!filesystemReady)
+    {
+        server.send(
+            500,
+            "text/plain; charset=utf-8",
+            "LittleFS is not available."
+        );
+        return;
+    }
+
+    String page = loadFile("/login.html");
+    if (page.isEmpty())
+    {
+        server.send(
+            404,
+            "text/plain; charset=utf-8",
+            "Login page not found."
+        );
+        return;
+    }
+
+    page.replace(
+        "{{DEVICE_NAME}}",
+        htmlEscape(Settings::data.deviceName)
+    );
+    page.replace("{{LOGIN_ERROR}}", htmlEscape(error));
+    page.replace(
+        "{{LOGIN_REDIRECT}}",
+        htmlEscape(safeRedirect(redirectTarget))
+    );
+    server.sendHeader(
+        "Cache-Control",
+        "no-cache, no-store, must-revalidate"
+    );
+    server.send(200, "text/html; charset=utf-8", page);
+}
+
 void WebServerManager::handleRoot()
 {
+    if (!requireAuthentication())
+    {
+        return;
+    }
     server.sendHeader(
         "Cache-Control",
         "no-cache, no-store, must-revalidate"
@@ -574,6 +921,10 @@ void WebServerManager::handleRoot()
 
 void WebServerManager::handleLogs()
 {
+    if (!requireAuthentication())
+    {
+        return;
+    }
     server.sendHeader(
         "Cache-Control",
         "no-cache, no-store, must-revalidate"
@@ -596,6 +947,10 @@ void WebServerManager::handleLogs()
 
 void WebServerManager::handleInfo()
 {
+    if (!requireAuthentication())
+    {
+        return;
+    }
     sendTemplate(
         "/info.html"
     );
@@ -603,6 +958,10 @@ void WebServerManager::handleInfo()
 
 void WebServerManager::handleHistoryApi()
 {
+    if (!requireAuthentication(true))
+    {
+        return;
+    }
     server.sendHeader(
         "Cache-Control",
         "no-cache, no-store, must-revalidate"
@@ -627,6 +986,10 @@ void WebServerManager::handleHistoryApi()
 
 void WebServerManager::handleLogsApi()
 {
+    if (!requireAuthentication(true))
+    {
+        return;
+    }
     server.sendHeader(
         "Cache-Control",
         "no-cache, no-store, must-revalidate"
@@ -651,6 +1014,10 @@ void WebServerManager::handleLogsApi()
 
 void WebServerManager::handleStatus()
 {
+    if (!requireAuthentication(true))
+    {
+        return;
+    }
     const bool sensorValid =
         Sensor::isValid();
 
@@ -863,6 +1230,10 @@ json += ",";
 
 void WebServerManager::handleSave()
 {
+    if (!requireAuthentication())
+    {
+        return;
+    }
     if (server.hasArg("buttonPin"))
     {
         server.send(
@@ -871,6 +1242,89 @@ void WebServerManager::handleSave()
             "Pin settings must be saved from the Device Info page."
         );
         return;
+    }
+
+    SettingsData loginCandidate = Settings::data;
+    loginCandidate.webLoginEnabled =
+        server.hasArg("webLoginEnabled");
+    const String submittedWebPassword =
+        server.arg("webPassword");
+
+    if (loginCandidate.webLoginEnabled)
+    {
+        loginCandidate.webUsername =
+            server.arg("webUsername");
+        loginCandidate.webUsername.trim();
+
+        if (
+            loginCandidate.webUsername.isEmpty() ||
+            loginCandidate.webUsername.length() > 32
+        )
+        {
+            server.send(
+                400,
+                "text/plain; charset=utf-8",
+                "Web username must contain 1 to 32 characters."
+            );
+            return;
+        }
+
+        if (!submittedWebPassword.isEmpty())
+        {
+            if (
+                submittedWebPassword.length() < 4 ||
+                submittedWebPassword.length() > 64
+            )
+            {
+                server.send(
+                    400,
+                    "text/plain; charset=utf-8",
+                    "Web password must contain 4 to 64 characters."
+                );
+                return;
+            }
+            loginCandidate.webPassword = submittedWebPassword;
+        }
+
+        if (
+            loginCandidate.webPassword.length() < 4 ||
+            loginCandidate.webPassword.length() > 64
+        )
+        {
+            server.send(
+                400,
+                "text/plain; charset=utf-8",
+                "Set a valid web password before enabling login."
+            );
+            return;
+        }
+
+        const String timeoutText =
+            server.arg("webSessionTimeoutMinutes");
+        bool timeoutValid = !timeoutText.isEmpty();
+        for (
+            size_t index = 0;
+            index < timeoutText.length() && timeoutValid;
+            ++index
+        )
+        {
+            timeoutValid =
+                timeoutText[index] >= '0' &&
+                timeoutText[index] <= '9';
+        }
+        const unsigned long timeout =
+            timeoutValid ? timeoutText.toInt() : 0;
+        if (timeout < 1 || timeout > 1440)
+        {
+            server.send(
+                400,
+                "text/plain; charset=utf-8",
+                "Web session timeout must be between 1 and 1440 minutes."
+            );
+            return;
+        }
+        loginCandidate.webSessionTimeoutMinutes =
+            static_cast<uint16_t>(timeout);
     }
 
     SettingsData networkCandidate = Settings::data;
@@ -1263,7 +1717,27 @@ Settings::data.batteryEstimateTestMode =
         "batteryEstimateTestMode"
     );
 
+const bool webCredentialsChanged =
+    Settings::data.webUsername != loginCandidate.webUsername ||
+    Settings::data.webPassword != loginCandidate.webPassword;
+const bool webLoginDisabled =
+    Settings::data.webLoginEnabled &&
+    !loginCandidate.webLoginEnabled;
+Settings::data.webLoginEnabled =
+    loginCandidate.webLoginEnabled;
+Settings::data.webUsername =
+    loginCandidate.webUsername;
+Settings::data.webPassword =
+    loginCandidate.webPassword;
+Settings::data.webSessionTimeoutMinutes =
+    loginCandidate.webSessionTimeoutMinutes;
+
 Settings::save();
+
+if (webCredentialsChanged || webLoginDisabled)
+{
+    invalidateSession();
+}
 
     const bool batteryConfigurationChanged =
         previousEmpty !=
@@ -1296,6 +1770,10 @@ Settings::save();
 
 void WebServerManager::handleSavePins()
 {
+    if (!requireAuthentication())
+    {
+        return;
+    }
     SettingsData candidate = Settings::data;
     const char* pinArguments[] =
     {
@@ -1371,6 +1849,10 @@ void WebServerManager::handleSavePins()
 
 void WebServerManager::handleRestoreDefaultPins()
 {
+    if (!requireAuthentication())
+    {
+        return;
+    }
     Settings::restoreDefaultPins();
     Settings::save();
     Logger::warning("Default pin configuration restored; restart required");
@@ -1389,6 +1871,10 @@ void WebServerManager::handleRestoreDefaultPins()
 
 void WebServerManager::handleMeasure()
 {
+    if (!requireAuthentication())
+    {
+        return;
+    }
     Logger::info(
         "Measurement requested from web interface"
     );
@@ -1503,6 +1989,10 @@ void WebServerManager::handleMeasure()
 }
 void WebServerManager::handleResetBatteryEstimate()
 {
+    if (!requireAuthentication())
+    {
+        return;
+    }
     Logger::warning(
         "Battery estimate reset requested "
         "from web interface"
@@ -1531,6 +2021,10 @@ void WebServerManager::handleResetBatteryEstimate()
 }
 void WebServerManager::handleClearHistory()
 {
+    if (!requireAuthentication())
+    {
+        return;
+    }
     MeasurementHistory::clear();
 
     server.sendHeader(
@@ -1548,6 +2042,10 @@ void WebServerManager::handleClearHistory()
 
 void WebServerManager::handleClearLogs()
 {
+    if (!requireAuthentication())
+    {
+        return;
+    }
     Logger::clearPersistentLogs();
 
     server.sendHeader(
@@ -1565,6 +2063,10 @@ void WebServerManager::handleClearLogs()
 
 void WebServerManager::handlePublishMqttDiscovery()
 {
+    if (!requireAuthentication())
+    {
+        return;
+    }
     Logger::info(
         "MQTT Discovery requested from web interface"
     );
@@ -1708,6 +2210,10 @@ void WebServerManager::handlePublishMqttDiscovery()
 }
 void WebServerManager::handleSleep()
 {
+    if (!requireAuthentication())
+    {
+        return;
+    }
     Logger::info(
         "Deep sleep requested from web interface"
     );
@@ -1722,6 +2228,10 @@ void WebServerManager::handleSleep()
 
 void WebServerManager::handleRestart()
 {
+    if (!requireAuthentication())
+    {
+        return;
+    }
     Logger::warning(
         "Restart requested from web interface"
     );
@@ -1736,6 +2246,10 @@ void WebServerManager::handleRestart()
 
 void WebServerManager::handleNotFound()
 {
+    if (!requireAuthentication())
+    {
+        return;
+    }
     Logger::warning(
         "Unknown request: " +
         server.uri()
@@ -2078,12 +2592,40 @@ void WebServerManager::processTemplate(
     page.replace("{{LAST_DHCP_DNS_2}}", suggestedDhcpDns2);
 
     page.replace("{{AP_SSID}}", htmlEscape(Settings::data.apSsid));
+    page.replace(
+        "{{AP_DEFAULT_PASSWORD}}",
+        htmlEscape(CONFIG_AP_PASSWORD)
+    );
     page.replace("{{AP_IP}}", htmlEscape(Settings::data.apIp));
     page.replace("{{AP_GATEWAY}}", htmlEscape(Settings::data.apGateway));
     page.replace("{{AP_SUBNET}}", htmlEscape(Settings::data.apSubnet));
     page.replace(
         "{{AP_SECURITY}}",
         Settings::data.apPassword.isEmpty() ? "Open" : "Protected"
+    );
+    page.replace(
+        "{{WEB_LOGIN_ENABLED_CHECKED}}",
+        Settings::data.webLoginEnabled ? "checked" : ""
+    );
+    page.replace(
+        "{{WEB_USERNAME}}",
+        htmlEscape(Settings::data.webUsername)
+    );
+    page.replace(
+        "{{WEB_SESSION_TIMEOUT_MINUTES}}",
+        String(Settings::data.webSessionTimeoutMinutes)
+    );
+    page.replace(
+        "{{LOGOUT_CONTROL}}",
+        (
+            Settings::data.webLoginEnabled &&
+            !configPortalActive &&
+            hasValidSession(false)
+        )
+            ? "<form method=\"POST\" action=\"/logout\">"
+              "<button class=\"nav-link\" type=\"submit\">Logout</button>"
+              "</form>"
+            : ""
     );
 
     page.replace(

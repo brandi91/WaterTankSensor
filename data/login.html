@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Web Login</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main class="login-page">
+    <div class="login-shell">
+        <div class="login-brand">
+            <strong>{{DEVICE_NAME}}</strong>
+            <span>ESP32 Water Tank Sensor</span>
+        </div>
+
+        <section class="panel login-card">
+            <h1>Sign in</h1>
+            <p>Enter the configured web-access credentials.</p>
+
+            <div id="loginError" class="login-error">
+                {{LOGIN_ERROR}}
+            </div>
+
+            <form class="login-form" method="POST" action="/login">
+                <input
+                    type="hidden"
+                    name="redirect"
+                    value="{{LOGIN_REDIRECT}}">
+
+                <label for="loginUsername">Username</label>
+                <input
+                    id="loginUsername"
+                    name="username"
+                    type="text"
+                    maxlength="32"
+                    autocomplete="username"
+                    required
+                    autofocus>
+
+                <label for="loginPassword">Password</label>
+                <input
+                    id="loginPassword"
+                    name="password"
+                    type="password"
+                    maxlength="64"
+                    autocomplete="current-password"
+                    required>
+
+                <button class="login-submit" type="submit">
+                    Sign in
+                </button>
+            </form>
+
+            <div class="login-footnote">
+                This login is a basic local access barrier and does not provide
+                HTTPS or strong network security.
+            </div>
+        </section>
+    </div>
+</main>
+
+<script>
+    (function () {
+        const error = document.getElementById("loginError");
+        if (!error) {
+            return;
+        }
+
+        const text = error.textContent.trim();
+        if (
+            !text ||
+            text === "{{LOGIN_ERROR}}"
+        ) {
+            error.hidden = true;
+        }
+    })();
+</script>
+</body>
+</html>

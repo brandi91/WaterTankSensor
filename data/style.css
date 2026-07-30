@@ -2763,3 +2763,465 @@ select {
         width: 100%;
     }
 }
+
+
+/* ============================================================
+ * 2026 unified layout refinements
+ * ============================================================ */
+.site-identity { gap: 2px; }
+.site-identity strong { font-size: 17px; }
+.site-identity small { color: var(--text-muted); font-size: 11px; }
+.page-header { padding: 4px 0 2px; }
+.page-header h1 { font-size: clamp(30px, 4vw, 44px); }
+.action-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+.settings-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    align-items: stretch;
+}
+.settings-card { grid-column: span 2; height: 100%; }
+.settings-wide { grid-column: span 3; }
+.settings-device, .settings-tank, .settings-mqtt, .settings-time, .settings-ap { grid-column: span 2; }
+.settings-wifi { grid-column: span 3; }
+.settings-battery { grid-column: span 3; }
+.battery-estimate-inline {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+}
+.battery-estimate-inline summary {
+    display: flex;
+    align-items: center;
+    padding: 0;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 750;
+    cursor: pointer;
+}
+.battery-estimate-inline summary::after { margin-left: auto; color: var(--text-muted); content: "⌄"; }
+.battery-estimate-inline[open] summary::after { content: "⌃"; }
+.battery-estimate-inline-content { padding-top: 10px; }
+.network-panel-muted { opacity: 1; }
+
+.details-content { align-items: start; }
+.details-group { height: auto; }
+
+.device-meta-strip {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(110px, 1fr));
+    gap: 8px;
+    width: min(100%, 620px);
+}
+.device-meta-strip span {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-small);
+    background: var(--panel-light);
+}
+.device-meta-strip b { overflow-wrap: anywhere; font-size: 12px; }
+.device-meta-strip small { order: -1; color: var(--text-muted); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+.status-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.status-tile {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 13px 15px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-medium);
+    background: var(--panel-light);
+}
+.status-tile span { color: var(--text-muted); font-size: 12px; }
+.status-tile strong { font-size: 13px; color: currentColor; }
+.section-heading-simple { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.section-heading-simple h2 { margin-top: 4px; font-size: 21px; }
+.wiring-card { padding: 22px; }
+.power-wiring-diagram { display:block; width:100%; height:auto; min-height:390px; }
+.power-wiring-diagram text { fill: var(--text); font: 750 12px system-ui,sans-serif; text-anchor: middle; }
+.power-wiring-diagram .diagram-sub { fill: var(--text-muted); font-size: 10px; font-weight: 600; }
+.diagram-box rect, .diagram-board > rect:first-child { fill: var(--panel-light); stroke: var(--border-light); stroke-width: 2; }
+.diagram-board > rect:first-child { stroke: var(--blue); }
+.diagram-board rect:nth-child(2) { fill: var(--background); stroke: var(--border); }
+.diagram-dark { fill: var(--background) !important; }
+.diagram-box circle { fill: var(--background); stroke: var(--text-muted); stroke-width: 3; }
+.diagram-box .led-r { fill: var(--red); stroke: var(--red); }
+.diagram-box .led-g { fill: var(--green); stroke: var(--green); }
+.diagram-box .led-b { fill: var(--blue); stroke: var(--blue); }
+.diagram-power, .diagram-signal, .diagram-ground, .diagram-resistor { fill:none; stroke-width:3; }
+.diagram-power { stroke: var(--red); }
+.diagram-signal { stroke: var(--blue); }
+.diagram-ground { stroke: var(--text-muted); }
+.diagram-resistor { stroke: var(--text-soft); }
+.diagram-flow-label { fill: var(--red) !important; font-size: 9px !important; }
+.diagram-label { fill: var(--text-soft) !important; font-size: 9px !important; text-anchor:start !important; }
+.diagram-ground-label { fill: var(--text-muted) !important; font-size: 9px !important; }
+.wiring-caption { display:flex; flex-wrap:wrap; align-items:center; gap:10px 18px; padding-top:14px; border-top:1px solid var(--border); color:var(--text-soft); font-size:12px; }
+.wiring-caption span { display:flex; align-items:center; gap:7px; }
+.wiring-caption i { width:24px; height:3px; border-radius:2px; }
+.wiring-caption p { flex:1 1 100%; margin:0; color:var(--text-muted); }
+.pin-config-compact-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+.pin-config-compact-grid label { display:flex; flex-direction:column; gap:9px; min-width:0; padding:13px; border:1px solid var(--border); border-radius:var(--radius-medium); background:var(--panel-light); }
+.pin-config-compact-grid label > span { display:flex; flex-direction:column; gap:2px; color:var(--text); font-weight:700; }
+.pin-config-compact-grid small { color:var(--text-muted); font-size:10px; font-weight:500; }
+.pin-config-compact-grid select { width:100%; padding:10px; border:1px solid var(--border-light); border-radius:var(--radius-small); background:var(--background); color:var(--text); }
+.form-action-bar { display:flex; justify-content:flex-end; margin-top:14px; }
+.form-action-bar .save-settings-button { width:auto; min-width:220px; margin:0; }
+.compact-danger-form { display:flex; justify-content:flex-end; margin-top:10px; }
+.compact-danger-form .battery-reset-button { width:auto; min-width:220px; }
+.info-two-column { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
+.button-behavior-list { display:grid; gap:8px; margin:0; padding:0; list-style:none; }
+.button-behavior-list li { display:grid; grid-template-columns:150px 1fr; gap:12px; padding:10px 12px; border-left:3px solid var(--text-muted); border-radius:0 var(--radius-small) var(--radius-small) 0; background:var(--panel-light); }
+.button-behavior-list li b { font-size:12px; }
+.button-behavior-list li span { color:var(--text-soft); font-size:12px; }
+.button-behavior-list .blue-step { border-color:var(--blue); }
+.button-behavior-list .red-step,.button-behavior-list .danger-step { border-color:var(--red); }
+.button-behavior-list .warning-step { border-color:var(--orange); }
+.compact-checks { grid-template-columns:repeat(2,minmax(0,1fr)); }
+
+@media (max-width: 1080px) {
+    .settings-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .settings-card,.settings-wide,.settings-device,.settings-tank,.settings-mqtt,.settings-time,.settings-ap,.settings-wifi,.settings-battery { grid-column: span 1; }
+    .pin-config-compact-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .device-meta-strip { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 760px) {
+    .action-grid,.status-strip,.info-two-column,.pin-config-compact-grid { grid-template-columns:1fr; }
+    .device-meta-strip { width:100%; }
+    .power-wiring-diagram { width:900px; min-height:0; }
+    .hardware-diagram-scroll { overflow-x:auto; }
+    .button-behavior-list li { grid-template-columns:1fr; gap:3px; }
+    .form-action-bar,.compact-danger-form { justify-content:stretch; }
+    .form-action-bar .save-settings-button,.compact-danger-form .battery-reset-button { width:100%; min-width:0; }
+}
+
+
+/* ============================================================
+ * Web Access settings
+ * ============================================================ */
+
+.settings-web-access {
+    grid-column: span 2;
+}
+
+.web-login-fields {
+    transition: opacity 160ms ease;
+}
+
+.web-login-fields-disabled {
+    opacity: 0.42;
+}
+
+.basic-security-note {
+    margin-top: 16px;
+    padding: 11px 12px;
+    border: 1px solid rgba(255, 173, 74, 0.35);
+    border-radius: var(--radius-small);
+    background: rgba(255, 173, 74, 0.07);
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+/* ============================================================
+ * Improved Info wiring overview
+ * ============================================================ */
+
+.pin-config-section {
+    margin-top: 0;
+}
+
+.form-action-bar {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+}
+
+.compact-danger-form {
+    margin-top: 12px;
+    padding-bottom: 4px;
+}
+
+.power-wiring-diagram {
+    min-height: 440px;
+}
+
+.power-wiring-diagram .power-node rect {
+    fill: rgba(12, 25, 43, 0.96);
+    stroke: rgba(255, 82, 82, 0.46);
+}
+
+.power-wiring-diagram .esp-power-node rect {
+    stroke: rgba(45, 140, 255, 0.7);
+}
+
+.usb-symbol,
+.charger-symbol,
+.boost-symbol,
+.battery-bars,
+.board-antenna,
+.board-header {
+    fill: none;
+    stroke: var(--text-soft);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.battery-shape {
+    fill: rgba(24, 212, 119, 0.12) !important;
+    stroke: var(--green) !important;
+}
+
+.battery-tip {
+    fill: var(--green) !important;
+    stroke: var(--green) !important;
+}
+
+.diagram-board .board-module {
+    fill: var(--background);
+    stroke: var(--border);
+}
+
+.diagram-board .board-usb {
+    fill: var(--text-muted);
+    stroke: var(--text-soft);
+}
+
+.diagram-board-title {
+    fill: var(--text) !important;
+    font-size: 16px !important;
+}
+
+.diagram-pin-labels text {
+    fill: var(--text-soft);
+    font-size: 10px;
+    text-anchor: start;
+}
+
+.power-arrow {
+    marker-end: url(#powerArrow);
+}
+
+.signal-arrow {
+    marker-end: url(#signalArrow);
+}
+
+.marker-power {
+    fill: var(--red);
+}
+
+.marker-signal {
+    fill: var(--blue);
+}
+
+.wiring-caption {
+    margin-top: 8px;
+}
+
+.wiring-caption p {
+    max-width: 88ch;
+    line-height: 1.55;
+}
+
+/* ============================================================
+ * Login page
+ * ============================================================ */
+
+.login-page {
+    display: grid;
+    min-height: calc(100vh - 52px);
+    place-items: center;
+}
+
+.login-shell {
+    width: min(100%, 440px);
+}
+
+.login-brand {
+    margin-bottom: 18px;
+    text-align: center;
+}
+
+.login-brand strong {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 22px;
+}
+
+.login-brand span {
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.login-card {
+    padding: 26px;
+}
+
+.login-card h1 {
+    margin: 0 0 7px;
+    font-size: 30px;
+}
+
+.login-card > p {
+    margin: 0 0 22px;
+    color: var(--text-soft);
+    line-height: 1.5;
+}
+
+.login-form {
+    display: grid;
+    gap: 8px;
+}
+
+.login-form label {
+    margin-top: 8px;
+    color: var(--text-soft);
+    font-size: 12px;
+}
+
+.login-form input {
+    width: 100%;
+    padding: 12px 13px;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-small);
+    outline: none;
+    background: #101d30;
+    color: var(--text);
+}
+
+.login-form input:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.15);
+}
+
+.login-submit {
+    width: 100%;
+    margin-top: 16px;
+    padding: 13px 16px;
+    border: 1px solid #2781ff;
+    border-radius: var(--radius-small);
+    background: linear-gradient(135deg, #1977ff, #075bea);
+    color: #fff;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.login-error {
+    margin-bottom: 16px;
+    padding: 11px 12px;
+    border: 1px solid rgba(255, 82, 82, 0.5);
+    border-radius: var(--radius-small);
+    background: rgba(255, 82, 82, 0.08);
+    color: #ffb4b4;
+    font-size: 13px;
+}
+
+.login-footnote {
+    margin-top: 16px;
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.5;
+    text-align: center;
+}
+
+@media (max-width: 1080px) {
+    .settings-web-access {
+        grid-column: span 1;
+    }
+}
+
+@media (max-width: 760px) {
+    .power-wiring-diagram {
+        width: 1020px;
+        min-height: 0;
+    }
+
+    .login-page {
+        min-height: calc(100vh - 32px);
+    }
+}
+
+
+/* ============================================================
+ * Settings layout refinement
+ * ============================================================ */
+
+.settings-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+}
+
+.settings-grid > .settings-card {
+    height: 100%;
+}
+
+.settings-device-tank,
+.settings-wifi,
+.settings-battery,
+.settings-web-access {
+    grid-column: 1 / -1;
+}
+
+.settings-access-point,
+.settings-mqtt,
+.settings-time {
+    grid-column: auto;
+}
+
+/* Keep large sections visually separated and easier to scan. */
+.settings-device-tank,
+.settings-wifi,
+.settings-battery,
+.settings-web-access {
+    padding: 22px;
+}
+
+.settings-card h3 {
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+/* Device Info page: restore the section spacing that was overridden
+   by the shared .page-content rule. */
+.page-content.info-content {
+    display: grid;
+    gap: 24px;
+}
+
+.info-content > section,
+.info-content > .info-pair {
+    margin: 0;
+}
+
+/* Give the pin controls breathing room before the next section. */
+.pin-config-section {
+    margin-bottom: 0;
+}
+
+.pin-restart-note {
+    margin: 20px 0 18px;
+}
+
+.form-action-bar {
+    margin-top: 0;
+}
+
+@media (max-width: 900px) {
+    .settings-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .settings-device-tank,
+    .settings-wifi,
+    .settings-access-point,
+    .settings-mqtt,
+    .settings-time,
+    .settings-battery,
+    .settings-web-access {
+        grid-column: 1;
+    }
+}
