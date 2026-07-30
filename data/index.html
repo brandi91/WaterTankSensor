@@ -319,6 +319,21 @@
                     </div>
 
                     <div class="detail-row">
+                        <span>Subnet Mask</span>
+                        <strong>{{CURRENT_SUBNET}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Gateway</span>
+                        <strong>{{CURRENT_GATEWAY}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>DNS 1</span>
+                        <strong>{{CURRENT_DNS_1}}</strong>
+                    </div>
+
+                    <div class="detail-row">
                         <span>Signal Strength</span>
                         <strong>{{WIFI_RSSI}} dBm</strong>
                     </div>
@@ -331,6 +346,21 @@
                     <div class="detail-row">
                         <span>Operating Mode</span>
                         <strong>{{NETWORK_MODE}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>DNS 2</span>
+                        <strong>{{CURRENT_DNS_2}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Wi-Fi Hostname</span>
+                        <strong>{{WIFI_HOSTNAME}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>mDNS Address</span>
+                        <strong>{{MDNS_NAME}}</strong>
                     </div>
 
                     <div class="detail-row">
@@ -410,23 +440,25 @@
                 </form>
 
                 <form
-    method="POST"
-    action="/mqtt-discovery"
-    class="mqtt-discovery-form">
+                    method="POST"
+                    action="/mqtt-discovery">
 
-    <button
-        type="submit"
-        class="mqtt-discovery-button">
+                    <button
+                        type="submit"
+                        class="action-button secondary-action">
 
-        Publish MQTT Discovery
-    </button>
+                        <span class="action-icon">
+                            M
+                        </span>
 
-    <small>
-        Sends the Home Assistant device configuration
-        to the MQTT broker again.
-    </small>
-
-</form>
+                        <span>
+                            <strong>Publish MQTT Discovery</strong>
+                            <small>
+                                Send Home Assistant configuration
+                            </small>
+                        </span>
+                    </button>
+                </form>
 
 
                 <form
@@ -554,6 +586,87 @@
 
                         <small class="field-help">
                             Wi-Fi changes become active after restart.
+                        </small>
+
+                        <label class="switch-row">
+
+                            <span>Use DHCP</span>
+
+                            <span class="switch-control">
+                                <input
+                                    type="checkbox"
+                                    name="wifiDhcp"
+                                    value="1"
+                                    {{WIFI_DHCP_CHECKED}}>
+
+                                <span class="switch-slider"></span>
+                            </span>
+
+                        </label>
+
+                        <label for="wifiStaticIp">
+                            Static IP
+                        </label>
+
+                        <input
+                            id="wifiStaticIp"
+                            name="wifiStaticIp"
+                            type="text"
+                            inputmode="decimal"
+                            placeholder="192.168.1.50"
+                            value="{{WIFI_STATIC_IP}}">
+
+                        <label for="wifiGateway">
+                            Gateway
+                        </label>
+
+                        <input
+                            id="wifiGateway"
+                            name="wifiGateway"
+                            type="text"
+                            inputmode="decimal"
+                            placeholder="192.168.1.1"
+                            value="{{WIFI_GATEWAY}}">
+
+                        <label for="wifiSubnet">
+                            Subnet Mask
+                        </label>
+
+                        <input
+                            id="wifiSubnet"
+                            name="wifiSubnet"
+                            type="text"
+                            inputmode="decimal"
+                            placeholder="255.255.255.0"
+                            value="{{WIFI_SUBNET}}">
+
+                        <label for="wifiDns1">
+                            DNS 1
+                        </label>
+
+                        <input
+                            id="wifiDns1"
+                            name="wifiDns1"
+                            type="text"
+                            inputmode="decimal"
+                            placeholder="192.168.1.1"
+                            value="{{WIFI_DNS_1}}">
+
+                        <label for="wifiDns2">
+                            DNS 2
+                        </label>
+
+                        <input
+                            id="wifiDns2"
+                            name="wifiDns2"
+                            type="text"
+                            inputmode="decimal"
+                            placeholder="1.1.1.1"
+                            value="{{WIFI_DNS_2}}">
+
+                        <small class="field-help">
+                            When DHCP is disabled, all five IPv4
+                            fields must be valid.
                         </small>
 
                     </section>

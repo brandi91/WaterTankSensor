@@ -24,6 +24,24 @@ namespace
     constexpr const char* KEY_WIFI_PASSWORD =
         "pass";
 
+    constexpr const char* KEY_WIFI_DHCP =
+        "dhcp";
+
+    constexpr const char* KEY_WIFI_STATIC_IP =
+        "staticIp";
+
+    constexpr const char* KEY_WIFI_GATEWAY =
+        "gateway";
+
+    constexpr const char* KEY_WIFI_SUBNET =
+        "subnet";
+
+    constexpr const char* KEY_WIFI_DNS_1 =
+        "dns1";
+
+    constexpr const char* KEY_WIFI_DNS_2 =
+        "dns2";
+
     constexpr const char* KEY_MQTT_SERVER =
         "mqtt";
 
@@ -103,6 +121,42 @@ void Settings::load()
     data.wifiPassword =
         preferences.getString(
             KEY_WIFI_PASSWORD,
+            ""
+        );
+
+    data.wifiDhcp =
+        preferences.getBool(
+            KEY_WIFI_DHCP,
+            true
+        );
+
+    data.wifiStaticIp =
+        preferences.getString(
+            KEY_WIFI_STATIC_IP,
+            ""
+        );
+
+    data.wifiGateway =
+        preferences.getString(
+            KEY_WIFI_GATEWAY,
+            ""
+        );
+
+    data.wifiSubnet =
+        preferences.getString(
+            KEY_WIFI_SUBNET,
+            ""
+        );
+
+    data.wifiDns1 =
+        preferences.getString(
+            KEY_WIFI_DNS_1,
+            ""
+        );
+
+    data.wifiDns2 =
+        preferences.getString(
+            KEY_WIFI_DNS_2,
             ""
         );
 
@@ -248,6 +302,36 @@ void Settings::save()
     preferences.putString(
         KEY_WIFI_PASSWORD,
         data.wifiPassword
+    );
+
+    preferences.putBool(
+        KEY_WIFI_DHCP,
+        data.wifiDhcp
+    );
+
+    preferences.putString(
+        KEY_WIFI_STATIC_IP,
+        data.wifiStaticIp
+    );
+
+    preferences.putString(
+        KEY_WIFI_GATEWAY,
+        data.wifiGateway
+    );
+
+    preferences.putString(
+        KEY_WIFI_SUBNET,
+        data.wifiSubnet
+    );
+
+    preferences.putString(
+        KEY_WIFI_DNS_1,
+        data.wifiDns1
+    );
+
+    preferences.putString(
+        KEY_WIFI_DNS_2,
+        data.wifiDns2
     );
 
 

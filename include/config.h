@@ -117,20 +117,7 @@
 #define DEFAULT_MEASURE_INTERVAL 300UL
 
 
-/*
- * ============================================================
- * Messintervall
- * ============================================================
- *
- * Wert in Sekunden.
- *
- * 300 Sekunden = 5 Minuten
- *
- * Dieser Wert wird ebenfalls als Deep-Sleep-Dauer verwendet,
- * solange kein anderer Wert gespeichert wurde.
- */
 
-#define DEFAULT_MEASURE_INTERVAL 300UL
 
 
 /*

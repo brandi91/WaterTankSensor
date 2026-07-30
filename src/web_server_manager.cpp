@@ -449,6 +449,30 @@ void WebServerManager::handleStatus()
     json += getIpAddress();
     json += "\",";
 
+    json += "\"subnetMask\":\"";
+    json += WifiManager::getSubnetMask();
+    json += "\",";
+
+    json += "\"gatewayAddress\":\"";
+    json += WifiManager::getGatewayAddress();
+    json += "\",";
+
+    json += "\"dns1\":\"";
+    json += WifiManager::getDnsAddress(0);
+    json += "\",";
+
+    json += "\"dns2\":\"";
+    json += WifiManager::getDnsAddress(1);
+    json += "\",";
+
+    json += "\"hostname\":\"";
+    json += WifiManager::getHostname();
+    json += "\",";
+
+    json += "\"mdnsName\":\"";
+    json += WifiManager::getMdnsName();
+    json += "\",";
+
     json += "\"networkMode\":\"";
     json += getNetworkMode();
     json += "\",";
@@ -531,6 +555,39 @@ void WebServerManager::handleSave()
             Settings::data.wifiPassword =
                 newWifiPassword;
         }
+    }
+
+    Settings::data.wifiDhcp =
+        server.hasArg("wifiDhcp");
+
+    if (server.hasArg("wifiStaticIp"))
+    {
+        Settings::data.wifiStaticIp =
+            server.arg("wifiStaticIp");
+    }
+
+    if (server.hasArg("wifiGateway"))
+    {
+        Settings::data.wifiGateway =
+            server.arg("wifiGateway");
+    }
+
+    if (server.hasArg("wifiSubnet"))
+    {
+        Settings::data.wifiSubnet =
+            server.arg("wifiSubnet");
+    }
+
+    if (server.hasArg("wifiDns1"))
+    {
+        Settings::data.wifiDns1 =
+            server.arg("wifiDns1");
+    }
+
+    if (server.hasArg("wifiDns2"))
+    {
+        Settings::data.wifiDns2 =
+            server.arg("wifiDns2");
     }
 
     Settings::data.mqttEnabled =
@@ -1130,6 +1187,90 @@ String WebServerManager::processTemplate(
         "{{WIFI_SSID}}",
         htmlEscape(
             Settings::data.wifiSSID
+        )
+    );
+
+    page.replace(
+        "{{WIFI_DHCP_CHECKED}}",
+        Settings::data.wifiDhcp
+            ? "checked"
+            : ""
+    );
+
+    page.replace(
+        "{{WIFI_STATIC_IP}}",
+        htmlEscape(
+            Settings::data.wifiStaticIp
+        )
+    );
+
+    page.replace(
+        "{{WIFI_GATEWAY}}",
+        htmlEscape(
+            Settings::data.wifiGateway
+        )
+    );
+
+    page.replace(
+        "{{WIFI_SUBNET}}",
+        htmlEscape(
+            Settings::data.wifiSubnet
+        )
+    );
+
+    page.replace(
+        "{{WIFI_DNS_1}}",
+        htmlEscape(
+            Settings::data.wifiDns1
+        )
+    );
+
+    page.replace(
+        "{{WIFI_DNS_2}}",
+        htmlEscape(
+            Settings::data.wifiDns2
+        )
+    );
+
+    page.replace(
+        "{{CURRENT_SUBNET}}",
+        WifiManager::isConnected()
+            ? WifiManager::getSubnetMask()
+            : "-"
+    );
+
+    page.replace(
+        "{{CURRENT_GATEWAY}}",
+        WifiManager::isConnected()
+            ? WifiManager::getGatewayAddress()
+            : "-"
+    );
+
+    page.replace(
+        "{{CURRENT_DNS_1}}",
+        WifiManager::isConnected()
+            ? WifiManager::getDnsAddress(0)
+            : "-"
+    );
+
+    page.replace(
+        "{{CURRENT_DNS_2}}",
+        WifiManager::isConnected()
+            ? WifiManager::getDnsAddress(1)
+            : "-"
+    );
+
+    page.replace(
+        "{{WIFI_HOSTNAME}}",
+        htmlEscape(
+            WifiManager::getHostname()
+        )
+    );
+
+    page.replace(
+        "{{MDNS_NAME}}",
+        htmlEscape(
+            WifiManager::getMdnsName()
         )
     );
 

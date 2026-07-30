@@ -339,8 +339,6 @@ bool MqttManager::publishDiscovery()
     const String hardwareId =
         buildHardwareId();
 
-    const String baseTopic =
-        buildTopic("");
 
     const String discoveryTopic =
         "homeassistant/device/" +

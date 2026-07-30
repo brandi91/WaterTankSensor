@@ -15,6 +15,12 @@ struct SettingsData
      */
     String wifiSSID;
     String wifiPassword;
+    bool wifiDhcp = true;
+    String wifiStaticIp;
+    String wifiGateway;
+    String wifiSubnet;
+    String wifiDns1;
+    String wifiDns2;
 
     /*
      * MQTT
