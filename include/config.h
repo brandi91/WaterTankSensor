@@ -207,7 +207,7 @@
  */
 
 // MQTT-Funktionen global ein- oder ausschalten
-#define MQTT_ENABLED false
+#define MQTT_ENABLED true
 
 // Abstand zwischen Verbindungsversuchen
 #define MQTT_RECONNECT_INTERVAL_MS 10000UL

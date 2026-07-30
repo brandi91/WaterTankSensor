@@ -244,13 +244,19 @@ void WebServerManager::registerRoutes()
     );
 
     server.on(
-        "/reset-battery-estimate",
-        HTTP_POST,
-        handleResetBatteryEstimate
-    );
+    "/reset-battery-estimate",
+    HTTP_POST,
+    handleResetBatteryEstimate
+);
 
-    server.on(
-        "/sleep",
+server.on(
+    "/mqtt-discovery",
+    HTTP_POST,
+    handlePublishMqttDiscovery
+);
+
+server.on(
+    "/sleep",
         HTTP_POST,
         handleSleep
     );
@@ -766,6 +772,120 @@ void WebServerManager::handleResetBatteryEstimate()
         "text/plain",
         ""
     );
+}
+void WebServerManager::handlePublishMqttDiscovery()
+{
+    Logger::info(
+        "MQTT Discovery requested from web interface"
+    );
+
+#if MQTT_ENABLED
+
+    if (!Settings::data.mqttEnabled)
+    {
+        Logger::warning(
+            "MQTT Discovery failed: MQTT disabled in settings"
+        );
+
+        server.send(
+            409,
+            "text/plain; charset=utf-8",
+            "MQTT is disabled. Enable MQTT and save the settings first."
+        );
+
+        return;
+    }
+
+    if (!WifiManager::isConnected())
+    {
+        Logger::warning(
+            "MQTT Discovery failed: Wi-Fi disconnected"
+        );
+
+        server.send(
+            503,
+            "text/plain; charset=utf-8",
+            "Wi-Fi is not connected."
+        );
+
+        return;
+    }
+
+    const bool wasAlreadyConnected =
+        MqttManager::isConnected();
+
+    if (
+        !wasAlreadyConnected &&
+        !MqttManager::connect()
+    )
+    {
+        Logger::warning(
+            "MQTT Discovery failed: broker connection failed"
+        );
+
+        server.send(
+            502,
+            "text/plain; charset=utf-8",
+            "Could not connect to the MQTT broker."
+        );
+
+        return;
+    }
+
+    const bool published =
+        MqttManager::publishDiscovery();
+
+    if (!wasAlreadyConnected)
+    {
+        MqttManager::disconnect();
+    }
+
+    if (!published)
+    {
+        Logger::warning(
+            "MQTT Discovery publish failed"
+        );
+
+        server.send(
+            500,
+            "text/plain; charset=utf-8",
+            "MQTT Discovery could not be published."
+        );
+
+        return;
+    }
+
+    Logger::info(
+        "MQTT Discovery successfully triggered "
+        "from web interface"
+    );
+
+    server.sendHeader(
+        "Location",
+        "/",
+        true
+    );
+
+    server.send(
+        303,
+        "text/plain",
+        ""
+    );
+
+#else
+
+    Logger::warning(
+        "MQTT Discovery unavailable: "
+        "MQTT not compiled into firmware"
+    );
+
+    server.send(
+        501,
+        "text/plain; charset=utf-8",
+        "MQTT is not compiled into this firmware."
+    );
+
+#endif
 }
 void WebServerManager::handleSleep()
 {

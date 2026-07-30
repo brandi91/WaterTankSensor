@@ -1340,4 +1340,37 @@ input {
         flex-direction: column;
         gap: 3px;
     }
+.mqtt-discovery-form {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+
+    margin-top: 16px;
+}
+
+.mqtt-discovery-form small {
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.mqtt-discovery-button {
+    width: 100%;
+    padding: 13px 18px;
+
+    border: 1px solid rgba(48, 160, 255, 0.8);
+    border-radius: var(--radius-medium);
+
+    background: rgba(48, 160, 255, 0.08);
+    color: var(--blue-bright);
+
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.mqtt-discovery-button:hover {
+    background: rgba(48, 160, 255, 0.16);
+}
+
+
 }

@@ -40,6 +40,7 @@ private:
     static void handleStatus();
     static void handleSave();
     static void handleMeasure();
+    static void handlePublishMqttDiscovery();
     static void handleResetBatteryEstimate();
     static void handleSleep();
     static void handleRestart();
