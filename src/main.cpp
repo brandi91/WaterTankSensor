@@ -10,6 +10,7 @@
 #include "sensor.h"
 #include "settings.h"
 #include "sleep_manager.h"
+#include "time_manager.h"
 #include "version.h"
 #include "web_server_manager.h"
 #include "wifi_manager.h"
@@ -41,6 +42,7 @@ bool webIndicatorLedState = false;
 unsigned long lastWebIndicatorToggle = 0;
 unsigned long webIndicatorStartedAt = 0;
 unsigned long lastBatteryLog = 0;
+bool timeSyncAttempted = false;
 
 
 /*
@@ -269,13 +271,16 @@ bool performMeasurement(
     const bool historyStored =
         MeasurementHistory::addCurrentMeasurement();
 
-    if (
-        !historyStored &&
-        !Sensor::isSimulated()
-    )
+    if (historyStored)
+    {
+        Logger::info(
+            "Measurement history entry stored"
+        );
+    }
+    else
     {
         Logger::warning(
-            "Failed to store measurement history"
+            "Measurement history entry was not stored"
         );
     }
 
@@ -441,10 +446,29 @@ void runAutomaticCycle(
     /*
      * WLAN arbeitet parallel zur Sensormessung.
      */
-#if MQTT_ENABLED
-    WifiManager::begin();
-    WifiManager::connect();
-#endif
+    bool wifiReady = false;
+
+    if (
+        Settings::data.ntpEnabled ||
+        MQTT_ENABLED
+    )
+    {
+        WifiManager::begin();
+        WifiManager::connect();
+
+        wifiReady =
+            waitForWifi(
+                WIFI_CONNECT_TIMEOUT_MS
+            );
+
+        if (
+            wifiReady &&
+            Settings::data.ntpEnabled
+        )
+        {
+            TimeManager::syncFromNtp();
+        }
+    }
 
     const bool measurementSuccessful =
         performMeasurement(
@@ -454,11 +478,7 @@ void runAutomaticCycle(
 #if MQTT_ENABLED
     if (measurementSuccessful)
     {
-        if (
-            waitForWifi(
-                WIFI_CONNECT_TIMEOUT_MS
-            )
-        )
+        if (wifiReady)
         {
             MqttManager::begin();
 
@@ -527,6 +547,7 @@ void setup()
     );
 
     Settings::begin();
+    TimeManager::begin();
 
     Battery::begin();
     BatteryEstimator::begin();
@@ -687,6 +708,15 @@ void loop()
     Battery::loop();
     Sensor::loop();
     WifiManager::loop();
+
+    if (
+        !timeSyncAttempted &&
+        WifiManager::isConnected()
+    )
+    {
+        timeSyncAttempted = true;
+        TimeManager::syncFromNtp();
+    }
 
     if (WebServerManager::isRunning())
     {

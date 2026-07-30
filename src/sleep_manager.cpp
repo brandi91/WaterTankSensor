@@ -4,6 +4,7 @@
 #include "led.h"
 #include "logger.h"
 #include "settings.h"
+#include "time_manager.h"
 
 WakeupReason SleepManager::wakeupReason =
     WakeupReason::Unknown;
@@ -89,6 +90,7 @@ void SleepManager::sleepForSeconds(
 
 #else
 
+    TimeManager::prepareForSleep(seconds);
     prepareForSleep();
 
     esp_sleep_enable_timer_wakeup(

@@ -2,6 +2,8 @@
 
 #include <LittleFS.h>
 
+#include "time_manager.h"
+
 namespace
 {
     constexpr const char* LOG_PATH =
@@ -24,6 +26,8 @@ namespace
     {
         uint32_t wakeCycle = 0;
         uint32_t uptimeSeconds = 0;
+        uint32_t timestamp = 0;
+        String timeSource;
         String level;
         String message;
     };
@@ -143,12 +147,25 @@ namespace
                 secondSeparator + 1
             );
 
+        const int fourthSeparator =
+            line.indexOf(
+                '\t',
+                thirdSeparator + 1
+            );
+
+        const int fifthSeparator =
+            line.indexOf(
+                '\t',
+                fourthSeparator + 1
+            );
+
         if (
             firstSeparator <= 0 ||
             secondSeparator <=
                 firstSeparator + 1 ||
-            thirdSeparator <=
-                secondSeparator + 1
+            thirdSeparator <= secondSeparator + 1 ||
+            fourthSeparator <= thirdSeparator + 1 ||
+            fifthSeparator <= fourthSeparator + 1
         )
         {
             return false;
@@ -166,10 +183,22 @@ namespace
                 secondSeparator
             );
 
-        const String level =
+        const String timestampText =
             line.substring(
                 secondSeparator + 1,
                 thirdSeparator
+            );
+
+        const String timeSource =
+            line.substring(
+                thirdSeparator + 1,
+                fourthSeparator
+            );
+
+        const String level =
+            line.substring(
+                fourthSeparator + 1,
+                fifthSeparator
             );
 
         if (
@@ -184,7 +213,7 @@ namespace
         const String message =
             unescapeLogField(
                 line.substring(
-                    thirdSeparator + 1
+                    fifthSeparator + 1
                 )
             );
 
@@ -202,6 +231,16 @@ namespace
             static_cast<uint32_t>(
                 uptimeText.toInt()
             );
+
+        entry.timestamp =
+            static_cast<uint32_t>(
+                strtoul(
+                    timestampText.c_str(),
+                    nullptr,
+                    10
+                )
+            );
+        entry.timeSource = timeSource;
 
         entry.level = level;
         entry.message = message;
@@ -305,6 +344,14 @@ namespace
             temporaryFile.print('\t');
             temporaryFile.print(
                 entries[index].uptimeSeconds
+            );
+            temporaryFile.print('\t');
+            temporaryFile.print(
+                entries[index].timestamp
+            );
+            temporaryFile.print('\t');
+            temporaryFile.print(
+                entries[index].timeSource
             );
             temporaryFile.print('\t');
             temporaryFile.print(
@@ -418,6 +465,8 @@ namespace
             "MQTT connected",
             "MQTT transmission",
             "Discovery",
+            "NTP synchronization",
+            "Measurement history",
             "deep sleep",
             "Deep sleep",
             "Sleeping for",
@@ -596,6 +645,18 @@ void Logger::persist(
 
     pendingEntries[
         pendingEntryCount
+    ].timestamp =
+        static_cast<uint32_t>(
+            TimeManager::now()
+        );
+
+    pendingEntries[
+        pendingEntryCount
+    ].timeSource =
+        TimeManager::getStorageTimeSource();
+
+    pendingEntries[
+        pendingEntryCount
     ].level = level;
 
     pendingEntries[
@@ -719,6 +780,13 @@ String Logger::getPersistentLogsJson()
         json += String(
             entries[index].uptimeSeconds
         );
+        json += ",\"timestamp\":";
+        json += String(
+            entries[index].timestamp
+        );
+        json += ",\"timeSource\":\"";
+        json += entries[index].timeSource;
+        json += "\"";
         json += ",\"level\":\"";
         json += entries[index].level;
         json += "\",\"message\":\"";

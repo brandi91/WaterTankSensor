@@ -1,101 +1,80 @@
 #include "measurement_history.h"
 
 #include <LittleFS.h>
+#include <math.h>
 
 #include "battery.h"
 #include "logger.h"
 #include "sensor.h"
+#include "settings.h"
+#include "time_manager.h"
 
 namespace
 {
     constexpr const char* HISTORY_PATH =
         "/measurement_history.json";
-
     constexpr const char* HISTORY_TEMP_PATH =
         "/measurement_history.tmp";
-
     constexpr size_t MAX_HISTORY_ENTRIES = 10;
     constexpr size_t MAX_HISTORY_FILE_SIZE = 8192;
 
     struct MeasurementRecord
     {
         uint32_t sequence = 0;
-        uint32_t wakeCycle = 0;
-        uint32_t uptimeSeconds = 0;
+        uint32_t timestamp = 0;
+        String timeSource;
         int fillPercent = 0;
         float waterLevelCm = 0.0f;
         float distanceCm = 0.0f;
         float batteryVoltage = 0.0f;
-        int batteryPercent = 0;
+        int batteryPercent = -1;
+        bool batteryValid = false;
         String sensorStatus;
+        bool simulated = false;
     };
 
     MeasurementRecord records[MAX_HISTORY_ENTRIES];
     size_t recordCount = 0;
     uint32_t nextSequence = 1;
 
-    bool extractNumber(
+    bool extractToken(
         const String& object,
         const String& key,
-        float& value
+        String& value
     )
     {
-        const String marker =
-            "\"" + key + "\":";
-
-        const int markerIndex =
-            object.indexOf(marker);
+        const String marker = "\"" + key + "\":";
+        const int markerIndex = object.indexOf(marker);
 
         if (markerIndex < 0)
         {
             return false;
         }
 
-        int valueStart =
-            markerIndex + marker.length();
+        int start = markerIndex + marker.length();
 
         while (
-            valueStart < object.length() &&
-            object.charAt(valueStart) == ' '
+            start < object.length() &&
+            object.charAt(start) == ' '
         )
         {
-            valueStart++;
+            start++;
         }
 
-        int valueEnd = valueStart;
+        int end = start;
 
-        while (valueEnd < object.length())
+        while (
+            end < object.length() &&
+            object.charAt(end) != ',' &&
+            object.charAt(end) != '}'
+        )
         {
-            const char character =
-                object.charAt(valueEnd);
-
-            if (
-                character != '-' &&
-                character != '.' &&
-                (
-                    character < '0' ||
-                    character > '9'
-                )
-            )
-            {
-                break;
-            }
-
-            valueEnd++;
+            end++;
         }
 
-        if (valueEnd == valueStart)
-        {
-            return false;
-        }
-
-        value =
-            object.substring(
-                valueStart,
-                valueEnd
-            ).toFloat();
-
-        return true;
+        value = object.substring(start, end);
+        value.trim();
+        return !value.isEmpty();
     }
 
     bool extractString(
@@ -104,37 +83,23 @@ namespace
         String& value
     )
     {
-        const String marker =
-            "\"" + key + "\":\"";
-
-        const int markerIndex =
-            object.indexOf(marker);
+        const String marker = "\"" + key + "\":\"";
+        const int markerIndex = object.indexOf(marker);
 
         if (markerIndex < 0)
         {
             return false;
         }
 
-        const int valueStart =
-            markerIndex + marker.length();
+        const int start = markerIndex + marker.length();
+        const int end = object.indexOf('"', start);
 
-        const int valueEnd =
-            object.indexOf(
-                '"',
-                valueStart
-            );
-
-        if (valueEnd < 0)
+        if (end < 0)
         {
             return false;
         }
 
-        value =
-            object.substring(
-                valueStart,
-                valueEnd
-            );
-
+        value = object.substring(start, end);
         return true;
     }
 
@@ -143,97 +108,83 @@ namespace
         MeasurementRecord& record
     )
     {
-        float sequence = 0.0f;
-        float wakeCycle = 0.0f;
-        float uptimeSeconds = 0.0f;
-        float fillPercent = 0.0f;
-        float waterLevelCm = 0.0f;
-        float distanceCm = 0.0f;
-        float batteryVoltage = 0.0f;
-        float batteryPercent = 0.0f;
-        String sensorStatus;
+        String token;
 
         if (
-            !extractNumber(
-                object,
-                "sequence",
-                sequence
-            ) ||
-            !extractNumber(
-                object,
-                "wakeCycle",
-                wakeCycle
-            ) ||
-            !extractNumber(
-                object,
-                "uptimeSeconds",
-                uptimeSeconds
-            ) ||
-            !extractNumber(
-                object,
-                "fillPercent",
-                fillPercent
-            ) ||
-            !extractNumber(
-                object,
-                "waterLevelCm",
-                waterLevelCm
-            ) ||
-            !extractNumber(
-                object,
-                "distanceCm",
-                distanceCm
-            ) ||
-            !extractNumber(
-                object,
-                "batteryVoltage",
-                batteryVoltage
-            ) ||
-            !extractNumber(
-                object,
-                "batteryPercent",
-                batteryPercent
-            ) ||
-            !extractString(
-                object,
-                "sensorStatus",
-                sensorStatus
-            )
+            !extractToken(object, "sequence", token) ||
+            token.toInt() < 1
         )
         {
             return false;
         }
+        record.sequence = token.toInt();
+
+        if (!extractToken(object, "timestamp", token))
+        {
+            return false;
+        }
+        record.timestamp =
+            static_cast<uint32_t>(strtoul(token.c_str(), nullptr, 10));
 
         if (
-            sequence < 1.0f ||
-            fillPercent < 0.0f ||
-            fillPercent > 100.0f ||
-            batteryPercent < 0.0f ||
-            batteryPercent > 100.0f ||
-            waterLevelCm < 0.0f ||
-            distanceCm < 0.0f ||
-            batteryVoltage < 0.0f
+            !extractString(object, "timeSource", record.timeSource) ||
+            !extractToken(object, "fillPercent", token)
         )
         {
             return false;
         }
+        record.fillPercent = token.toInt();
 
-        record.sequence =
-            static_cast<uint32_t>(sequence);
-        record.wakeCycle =
-            static_cast<uint32_t>(wakeCycle);
-        record.uptimeSeconds =
-            static_cast<uint32_t>(uptimeSeconds);
-        record.fillPercent =
-            static_cast<int>(fillPercent);
-        record.waterLevelCm = waterLevelCm;
-        record.distanceCm = distanceCm;
-        record.batteryVoltage = batteryVoltage;
-        record.batteryPercent =
-            static_cast<int>(batteryPercent);
-        record.sensorStatus = sensorStatus;
+        if (!extractToken(object, "waterLevelCm", token))
+        {
+            return false;
+        }
+        record.waterLevelCm = token.toFloat();
 
-        return true;
+        if (!extractToken(object, "distanceCm", token))
+        {
+            return false;
+        }
+        record.distanceCm = token.toFloat();
+
+        if (!extractToken(object, "batteryVoltage", token))
+        {
+            return false;
+        }
+        record.batteryVoltage = token.toFloat();
+
+        if (!extractToken(object, "batteryPercent", token))
+        {
+            return false;
+        }
+        record.batteryPercent = token.toInt();
+
+        if (!extractToken(object, "batteryValid", token))
+        {
+            return false;
+        }
+        record.batteryValid = token == "true";
+
+        if (
+            !extractString(object, "sensorStatus", record.sensorStatus) ||
+            !extractToken(object, "simulated", token)
+        )
+        {
+            return false;
+        }
+        record.simulated = token == "true";
+
+        return
+            record.fillPercent >= 0 &&
+            record.fillPercent <= 100 &&
+            isfinite(record.waterLevelCm) &&
+            record.waterLevelCm >= 0.0f &&
+            isfinite(record.distanceCm) &&
+            record.distanceCm >= 0.0f &&
+            isfinite(record.batteryVoltage) &&
+            record.batteryVoltage >= 0.0f &&
+            record.batteryPercent >= -1 &&
+            record.batteryPercent <= 100;
     }
 
     void appendRecordJson(
@@ -243,11 +194,11 @@ namespace
     {
         json += "{\"sequence\":";
         json += String(record.sequence);
-        json += ",\"wakeCycle\":";
-        json += String(record.wakeCycle);
-        json += ",\"uptimeSeconds\":";
-        json += String(record.uptimeSeconds);
-        json += ",\"fillPercent\":";
+        json += ",\"timestamp\":";
+        json += String(record.timestamp);
+        json += ",\"timeSource\":\"";
+        json += record.timeSource;
+        json += "\",\"fillPercent\":";
         json += String(record.fillPercent);
         json += ",\"waterLevelCm\":";
         json += String(record.waterLevelCm, 1);
@@ -257,81 +208,69 @@ namespace
         json += String(record.batteryVoltage, 2);
         json += ",\"batteryPercent\":";
         json += String(record.batteryPercent);
+        json += ",\"batteryValid\":";
+        json += record.batteryValid ? "true" : "false";
         json += ",\"sensorStatus\":\"";
         json += record.sensorStatus;
-        json += "\"}";
+        json += "\",\"simulated\":";
+        json += record.simulated ? "true" : "false";
+        json += "}";
     }
 
     bool rewriteHistory()
     {
-        File temporaryFile =
-            LittleFS.open(
-                HISTORY_TEMP_PATH,
-                "w"
-            );
+        File file = LittleFS.open(HISTORY_TEMP_PATH, "w");
 
-        if (!temporaryFile)
+        if (!file)
         {
+            Logger::error("History temporary file open failed");
             return false;
         }
 
-        temporaryFile.print("[");
+        bool writeSucceeded = file.print("[") == 1;
 
         for (
             size_t index = 0;
-            index < recordCount;
+            writeSucceeded && index < recordCount;
             index++
         )
         {
+            String object;
+            object.reserve(280);
+
             if (index > 0)
             {
-                temporaryFile.print(",");
+                writeSucceeded = file.print(",") == 1;
             }
 
-            String object;
-            object.reserve(240);
-
-            appendRecordJson(
-                object,
-                records[index]
-            );
-
-            temporaryFile.print(object);
+            appendRecordJson(object, records[index]);
+            writeSucceeded =
+                writeSucceeded &&
+                file.print(object) == object.length();
         }
 
-        temporaryFile.print("]");
-        temporaryFile.flush();
-
-        const bool writeSucceeded =
-            temporaryFile.getWriteError() == 0;
-
-        temporaryFile.close();
+        writeSucceeded =
+            writeSucceeded &&
+            file.print("]") == 1;
+        file.flush();
+        writeSucceeded =
+            writeSucceeded &&
+            file.getWriteError() == 0;
+        file.close();
 
         if (!writeSucceeded)
         {
-            LittleFS.remove(
-                HISTORY_TEMP_PATH
-            );
-
+            LittleFS.remove(HISTORY_TEMP_PATH);
+            Logger::error("History file write failed");
             return false;
         }
 
-        if (LittleFS.exists(HISTORY_PATH))
-        {
-            LittleFS.remove(HISTORY_PATH);
-        }
+        LittleFS.remove(HISTORY_PATH);
 
-        if (
-            !LittleFS.rename(
-                HISTORY_TEMP_PATH,
-                HISTORY_PATH
-            )
-        )
+        if (!LittleFS.rename(HISTORY_TEMP_PATH, HISTORY_PATH))
         {
-            LittleFS.remove(
-                HISTORY_TEMP_PATH
-            );
-
+            LittleFS.remove(HISTORY_TEMP_PATH);
+            Logger::error("History file replacement failed");
             return false;
         }
 
@@ -348,28 +287,22 @@ namespace
             return;
         }
 
-        File file =
-            LittleFS.open(
-                HISTORY_PATH,
-                "r"
-            );
+        File file = LittleFS.open(HISTORY_PATH, "r");
 
-        if (
-            !file ||
-            file.size() > MAX_HISTORY_FILE_SIZE
-        )
+        if (!file)
         {
-            if (file)
-            {
-                file.close();
-            }
-
+            Logger::warning("History file open failed");
             return;
         }
 
-        String content =
-            file.readString();
+        if (file.size() > MAX_HISTORY_FILE_SIZE)
+        {
+            file.close();
+            Logger::warning("History file exceeds size limit");
+            return;
+        }
 
+        String content = file.readString();
         file.close();
         content.trim();
 
@@ -378,63 +311,39 @@ namespace
             !content.endsWith("]")
         )
         {
+            Logger::warning("History file is malformed");
             return;
         }
 
-        int searchFrom = 0;
+        int position = 0;
 
-        while (
-            recordCount < MAX_HISTORY_ENTRIES
-        )
+        while (recordCount < MAX_HISTORY_ENTRIES)
         {
-            const int objectStart =
-                content.indexOf(
-                    '{',
-                    searchFrom
-                );
+            const int start = content.indexOf('{', position);
 
-            if (objectStart < 0)
+            if (start < 0)
             {
                 break;
             }
 
-            const int objectEnd =
-                content.indexOf(
-                    '}',
-                    objectStart
-                );
+            const int end = content.indexOf('}', start);
 
-            if (objectEnd < 0)
+            if (end < 0)
             {
+                Logger::warning("History record is malformed");
                 break;
             }
 
             MeasurementRecord record;
 
-            if (
-                parseRecord(
-                    content.substring(
-                        objectStart,
-                        objectEnd + 1
-                    ),
-                    record
-                )
-            )
+            if (parseRecord(content.substring(start, end + 1), record))
             {
-                records[recordCount] = record;
-                recordCount++;
-
-                if (
-                    record.sequence >=
-                    nextSequence
-                )
-                {
-                    nextSequence =
-                        record.sequence + 1;
-                }
+                records[recordCount++] = record;
+                nextSequence =
+                    max(nextSequence, record.sequence + 1);
             }
 
-            searchFrom = objectEnd + 1;
+            position = end + 1;
         }
     }
 }
@@ -444,79 +353,100 @@ bool MeasurementHistory::filesystemReady = false;
 
 void MeasurementHistory::begin()
 {
-    if (
-        initialized &&
-        filesystemReady
-    )
+    if (initialized)
     {
         return;
     }
 
-    filesystemReady =
-        LittleFS.begin(true);
-
-    if (!filesystemReady)
+    if (!LittleFS.begin(true))
     {
+        filesystemReady = false;
+        Logger::error("Measurement history: LittleFS unavailable");
         return;
     }
 
+    filesystemReady = true;
     initialized = true;
     loadHistory();
 }
 
 bool MeasurementHistory::addCurrentMeasurement()
 {
-    begin();
+    if (!initialized)
+    {
+        Logger::warning(
+            "Measurement history unavailable: not initialized"
+        );
+        return false;
+    }
+
+    const bool sensorValid = Sensor::isValid();
+    const bool simulated = Sensor::isSimulated();
+    const float waterLevel = Sensor::getWaterLevelCm();
+    const float distance = Sensor::getDistanceCm();
+    const int fillPercent = Sensor::getPercentage();
+    const bool calculatedValuesValid =
+        isfinite(waterLevel) &&
+        isfinite(distance) &&
+        waterLevel >= 0.0f &&
+        waterLevel <= Settings::data.tankHeight &&
+        distance >= 0.0f &&
+        fillPercent >= 0 &&
+        fillPercent <= 100;
 
     if (
         !filesystemReady ||
-        !Sensor::isValid() ||
-        Sensor::isSimulated()
+        !sensorValid ||
+        !calculatedValuesValid
     )
     {
+        Logger::warning(
+            "Measurement history rejected: fs=" +
+            String(filesystemReady ? "ready" : "unavailable") +
+            ", sensorValid=" +
+            String(sensorValid ? "true" : "false") +
+            ", simulated=" +
+            String(simulated ? "true" : "false") +
+            ", count=" +
+            String(recordCount)
+        );
         return false;
     }
 
     MeasurementRecord record;
-
     record.sequence = nextSequence++;
-    record.wakeCycle =
-        Logger::getWakeCycleId();
-    record.uptimeSeconds =
-        millis() / 1000UL;
-    record.fillPercent =
-        Sensor::getPercentage();
-    record.waterLevelCm =
-        Sensor::getWaterLevelCm();
-    record.distanceCm =
-        Sensor::getDistanceCm();
-    record.batteryVoltage =
-        Battery::getVoltage();
-    record.batteryPercent =
-        Battery::getPercentage();
-    record.sensorStatus = "OK";
+    record.timestamp =
+        static_cast<uint32_t>(TimeManager::now());
+    record.timeSource =
+        TimeManager::getStorageTimeSource();
+    record.fillPercent = fillPercent;
+    record.waterLevelCm = waterLevel;
+    record.distanceCm = distance;
+    record.batteryVoltage = Battery::getVoltage();
+    record.batteryPercent = Battery::getPercentage();
+    record.batteryValid = Battery::isValid();
+    record.sensorStatus = simulated ? "Simulated" : "OK";
+    record.simulated = simulated;
 
     if (recordCount == MAX_HISTORY_ENTRIES)
     {
-        for (
-            size_t index = 1;
-            index < recordCount;
-            index++
-        )
+        for (size_t index = 1; index < recordCount; index++)
         {
-            records[index - 1] =
-                records[index];
+            records[index - 1] = records[index];
         }
 
         recordCount--;
     }
 
-    records[recordCount] = record;
-    recordCount++;
+    records[recordCount++] = record;
 
     if (!rewriteHistory())
     {
         loadHistory();
+        Logger::warning(
+            "Measurement history entry was not stored; count=" +
+            String(recordCount)
+        );
         return false;
     }
 
@@ -525,58 +455,39 @@ bool MeasurementHistory::addCurrentMeasurement()
 
 String MeasurementHistory::toJson()
 {
-    begin();
-
     String json;
-    json.reserve(
-        96 +
-        recordCount * 240
-    );
-
+    json.reserve(96 + recordCount * 280);
     json += "{\"count\":";
     json += String(recordCount);
     json += ",\"measurements\":[";
 
-    for (
-        size_t index = 0;
-        index < recordCount;
-        index++
-    )
+    for (size_t index = 0; index < recordCount; index++)
     {
         if (index > 0)
         {
             json += ",";
         }
 
-        appendRecordJson(
-            json,
-            records[index]
-        );
+        appendRecordJson(json, records[index]);
     }
 
     json += "]}";
-
     return json;
 }
 
 void MeasurementHistory::clear()
 {
-    begin();
-
     recordCount = 0;
     nextSequence = 1;
 
-    if (!filesystemReady)
+    if (filesystemReady)
     {
-        return;
+        LittleFS.remove(HISTORY_PATH);
+        LittleFS.remove(HISTORY_TEMP_PATH);
     }
-
-    LittleFS.remove(HISTORY_PATH);
-    LittleFS.remove(HISTORY_TEMP_PATH);
 }
 
 size_t MeasurementHistory::count()
 {
-    begin();
     return recordCount;
 }

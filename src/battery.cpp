@@ -4,6 +4,7 @@
 
 #include "config.h"
 #include "logger.h"
+#include "settings.h"
 
 /*
  * Spannungsteiler:
@@ -135,21 +136,25 @@ int Battery::getPercentage()
      * Später können wir eine realistischere
      * Li-Ion-Kennlinie verwenden.
      */
-    constexpr float BATTERY_EMPTY_VOLTAGE =
-        3.20f;
+    if (!isValid())
+    {
+        return -1;
+    }
 
-    constexpr float BATTERY_FULL_VOLTAGE =
-        4.20f;
+    const float emptyVoltage =
+        Settings::data.batteryEmptyVoltage;
+    const float fullVoltage =
+        Settings::data.batteryFullVoltage;
 
     if (
-        voltage >= BATTERY_FULL_VOLTAGE
+        voltage >= fullVoltage
     )
     {
         return 100;
     }
 
     if (
-        voltage <= BATTERY_EMPTY_VOLTAGE
+        voltage <= emptyVoltage
     )
     {
         return 0;
@@ -158,11 +163,11 @@ int Battery::getPercentage()
     const float percentage =
         (
             voltage -
-            BATTERY_EMPTY_VOLTAGE
+            emptyVoltage
         ) /
         (
-            BATTERY_FULL_VOLTAGE -
-            BATTERY_EMPTY_VOLTAGE
+            fullVoltage -
+            emptyVoltage
         ) *
         100.0f;
 
@@ -171,14 +176,26 @@ int Battery::getPercentage()
     );
 }
 
+bool Battery::isValid()
+{
+    return
+        isfinite(voltage) &&
+        voltage > 0.1f &&
+        Settings::data.batteryEmptyVoltage > 0.0f &&
+        Settings::data.batteryFullVoltage >
+            Settings::data.batteryEmptyVoltage;
+}
+
 bool Battery::isLow()
 {
-    return voltage < 3.50f;
+    const int percentage = getPercentage();
+    return percentage >= 0 && percentage < 20;
 }
 
 bool Battery::isCritical()
 {
-    return voltage < 3.30f;
+    const int percentage = getPercentage();
+    return percentage >= 0 && percentage < 5;
 }
 
 bool Battery::isCharging()

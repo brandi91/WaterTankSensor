@@ -83,8 +83,20 @@
                         <span></span>
                     </div>
 
-                    <div class="last-update">
-                        Last updated:
+                    <div class="last-update dashboard-time">
+                        Current time:
+                        <strong id="currentDeviceTime">
+                            {{CURRENT_DEVICE_TIME}}
+                        </strong>
+                        <span>
+                            Time source:
+                            <strong id="currentTimeSource">
+                                {{TIME_SOURCE}}
+                            </strong>
+                        </span>
+                        <span>
+                            Last updated:
+                        </span>
                         <strong id="lastUpdated">
                             just now
                         </strong>
@@ -192,7 +204,7 @@
                 </div>
 
                 <div class="battery-percentage">
-                    {{BATTERY_PERCENT}}<span>%</span>
+                    {{BATTERY_PERCENT_DISPLAY}}
                 </div>
 
                 <div class="battery-voltage">
@@ -350,7 +362,7 @@
 
                     <div class="detail-row">
                         <span>Battery Percentage</span>
-                        <strong>{{BATTERY_PERCENT}}%</strong>
+                        <strong>{{BATTERY_PERCENT_DISPLAY}}</strong>
                     </div>
 
                     <div class="detail-row">
@@ -361,6 +373,46 @@
                     <div class="detail-row">
                         <span>Power Source</span>
                         <strong>{{POWER_SOURCE}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Current Device Time</span>
+                        <strong>{{CURRENT_DEVICE_TIME}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Time Source</span>
+                        <strong>{{TIME_SOURCE}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Last Measurement</span>
+                        <strong>{{LAST_MEASUREMENT}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Configured Empty Voltage</span>
+                        <strong>{{BATTERY_EMPTY_VOLTAGE}} V</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Configured Full Voltage</span>
+                        <strong>{{BATTERY_FULL_VOLTAGE}} V</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Configured Capacity</span>
+                        <strong>{{BATTERY_CAPACITY_MAH}} mAh</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Battery Chemistry</span>
+                        <strong>{{BATTERY_CHEMISTRY}}</strong>
+                    </div>
+
+                    <div class="detail-row">
+                        <span>Cell Count</span>
+                        <strong>{{BATTERY_CELL_COUNT}}</strong>
                     </div>
 
                     <div class="detail-row">
@@ -640,7 +692,14 @@
                                 value="{{MEASURE_INTERVAL}}"
                                 required>
 
-                            <span>seconds</span>
+                            <select
+                                id="measureIntervalUnit"
+                                name="measureIntervalUnit"
+                                aria-label="Measurement interval unit">
+                                <option value="seconds" {{INTERVAL_SECONDS_SELECTED}}>seconds</option>
+                                <option value="minutes" {{INTERVAL_MINUTES_SELECTED}}>minutes</option>
+                                <option value="hours" {{INTERVAL_HOURS_SELECTED}}>hours</option>
+                            </select>
                         </div>
 
                         <small class="field-help">
@@ -886,6 +945,107 @@
     maximum water level.
 </small>
 
+</section>
+
+<!-- Time and NTP settings -->
+
+<section class="settings-card">
+    <h3>Time &amp; NTP</h3>
+
+    <label class="switch-row">
+        <span>Enable NTP</span>
+        <span class="switch-control">
+            <input
+                type="checkbox"
+                name="ntpEnabled"
+                value="1"
+                {{NTP_ENABLED_CHECKED}}>
+            <span class="switch-slider"></span>
+        </span>
+    </label>
+
+    <label for="timeZone">Time Zone</label>
+    <input
+        id="timeZone"
+        name="timeZone"
+        type="text"
+        value="{{TIME_ZONE}}"
+        placeholder="UTC0">
+
+    <label for="ntpServer1">NTP Server 1</label>
+    <input id="ntpServer1" name="ntpServer1" type="text" value="{{NTP_SERVER_1}}">
+
+    <label for="ntpServer2">NTP Server 2</label>
+    <input id="ntpServer2" name="ntpServer2" type="text" value="{{NTP_SERVER_2}}">
+
+    <label for="ntpServer3">NTP Server 3</label>
+    <input id="ntpServer3" name="ntpServer3" type="text" value="{{NTP_SERVER_3}}">
+
+    <label for="ntpTimeoutSeconds">NTP Timeout</label>
+    <div class="input-with-unit">
+        <input
+            id="ntpTimeoutSeconds"
+            name="ntpTimeoutSeconds"
+            type="number"
+            min="1"
+            max="30"
+            value="{{NTP_TIMEOUT}}">
+        <span>seconds</span>
+    </div>
+
+    <small class="field-help">
+        Device time is synchronized during wake-up when Wi-Fi is available.
+        If synchronization fails, the firmware can use an estimated time.
+    </small>
+</section>
+
+<!-- Battery configuration -->
+
+<section class="settings-card">
+    <h3>Battery Configuration</h3>
+
+    <label for="batteryEmptyVoltage">Empty Battery Voltage</label>
+    <div class="input-with-unit">
+        <input id="batteryEmptyVoltage" name="batteryEmptyVoltage"
+            type="number" min="0.01" step="0.01"
+            value="{{BATTERY_EMPTY_VOLTAGE}}" required>
+        <span>V</span>
+    </div>
+
+    <label for="batteryFullVoltage">Full Battery Voltage</label>
+    <div class="input-with-unit">
+        <input id="batteryFullVoltage" name="batteryFullVoltage"
+            type="number" min="0.02" step="0.01"
+            value="{{BATTERY_FULL_VOLTAGE}}" required>
+        <span>V</span>
+    </div>
+
+    <label for="batteryCapacityMah">Battery Capacity</label>
+    <div class="input-with-unit">
+        <input id="batteryCapacityMah" name="batteryCapacityMah"
+            type="number" min="1" max="100000"
+            value="{{BATTERY_CAPACITY_MAH}}" required>
+        <span>mAh</span>
+    </div>
+
+    <label for="batteryChemistry">Battery Chemistry</label>
+    <select id="batteryChemistry" name="batteryChemistry">
+        <option value="custom" {{CHEM_CUSTOM_SELECTED}}>Custom</option>
+        <option value="li-ion" {{CHEM_LIION_SELECTED}}>Li-ion / LiPo</option>
+        <option value="lifepo4" {{CHEM_LIFEPO4_SELECTED}}>LiFePO4</option>
+        <option value="nimh" {{CHEM_NIMH_SELECTED}}>NiMH</option>
+    </select>
+
+    <label for="batteryCellCount">Number of Cells</label>
+    <input id="batteryCellCount" name="batteryCellCount"
+        type="number" min="1" max="255"
+        value="{{BATTERY_CELL_COUNT}}" required>
+
+    <small class="field-help">
+        Use the cell count only when the measured voltage represents
+        the complete battery pack. Capacity affects lifetime estimation,
+        not the voltage-based percentage.
+    </small>
 </section>
 
 
@@ -1189,6 +1349,35 @@
                         data.batterySamples;
                 }
 
+
+                /*
+                 * Device time
+                 */
+
+                const deviceTime =
+                    document.getElementById(
+                        "currentDeviceTime"
+                    );
+                const timeSource =
+                    document.getElementById(
+                        "currentTimeSource"
+                    );
+
+                if (deviceTime) {
+                    deviceTime.textContent =
+                        data.currentTimeValid
+                            ? new Date(
+                                data.currentTimestamp *
+                                1000
+                              ).toLocaleString()
+                            : "Unavailable";
+                }
+
+                if (timeSource) {
+                    timeSource.textContent =
+                        data.timeSource ||
+                        "Unavailable";
+                }
 
                 /*
                  * Last update time

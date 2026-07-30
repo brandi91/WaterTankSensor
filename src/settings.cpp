@@ -73,6 +73,19 @@ constexpr const char* KEY_SENSOR_CLEARANCE =
 constexpr const char* KEY_MEASURE_INTERVAL =
     "interval";
 
+constexpr const char* KEY_NTP_ENABLED = "ntpEnabled";
+constexpr const char* KEY_TIME_ZONE = "timeZone";
+constexpr const char* KEY_NTP_SERVER_1 = "ntp1";
+constexpr const char* KEY_NTP_SERVER_2 = "ntp2";
+constexpr const char* KEY_NTP_SERVER_3 = "ntp3";
+constexpr const char* KEY_NTP_TIMEOUT = "ntpTimeout";
+
+constexpr const char* KEY_BATTERY_EMPTY = "batEmpty";
+constexpr const char* KEY_BATTERY_FULL = "batFull";
+constexpr const char* KEY_BATTERY_CAPACITY = "batCapacity";
+constexpr const char* KEY_BATTERY_CHEMISTRY = "batChem";
+constexpr const char* KEY_BATTERY_CELLS = "batCells";
+
 /*
  * Gespeicherter Schalter für den schnellen
  * Battery-Estimator-Testmodus.
@@ -242,15 +255,74 @@ void Settings::load()
      * Mess- und Deep-Sleep-Intervall
      */
     data.measureInterval =
-        preferences.getUShort(
+        preferences.getULong(
             KEY_MEASURE_INTERVAL,
             DEFAULT_MEASURE_INTERVAL
         );
 
-if (data.measureInterval == 0)
+if (
+    data.measureInterval == 0 ||
+    data.measureInterval > 86400UL
+)
 {
     data.measureInterval =
         DEFAULT_MEASURE_INTERVAL;
+}
+
+data.ntpEnabled =
+    preferences.getBool(KEY_NTP_ENABLED, true);
+data.timeZone =
+    preferences.getString(KEY_TIME_ZONE, "UTC0");
+data.ntpServer1 =
+    preferences.getString(KEY_NTP_SERVER_1, "pool.ntp.org");
+data.ntpServer2 =
+    preferences.getString(KEY_NTP_SERVER_2, "time.nist.gov");
+data.ntpServer3 =
+    preferences.getString(KEY_NTP_SERVER_3, "time.google.com");
+data.ntpTimeoutSeconds =
+    preferences.getUChar(KEY_NTP_TIMEOUT, 8);
+
+if (
+    data.ntpTimeoutSeconds < 1 ||
+    data.ntpTimeoutSeconds > 30
+)
+{
+    data.ntpTimeoutSeconds = 8;
+}
+
+data.batteryEmptyVoltage =
+    preferences.getFloat(KEY_BATTERY_EMPTY, 3.20f);
+data.batteryFullVoltage =
+    preferences.getFloat(KEY_BATTERY_FULL, 4.20f);
+data.batteryCapacityMah =
+    preferences.getULong(KEY_BATTERY_CAPACITY, 2000UL);
+data.batteryChemistry =
+    preferences.getString(KEY_BATTERY_CHEMISTRY, "custom");
+data.batteryCellCount =
+    preferences.getUChar(KEY_BATTERY_CELLS, 1);
+
+if (
+    !isfinite(data.batteryEmptyVoltage) ||
+    !isfinite(data.batteryFullVoltage) ||
+    data.batteryEmptyVoltage <= 0.0f ||
+    data.batteryFullVoltage <= data.batteryEmptyVoltage
+)
+{
+    data.batteryEmptyVoltage = 3.20f;
+    data.batteryFullVoltage = 4.20f;
+}
+
+if (
+    data.batteryCapacityMah == 0 ||
+    data.batteryCapacityMah > 100000UL
+)
+{
+    data.batteryCapacityMah = 2000UL;
+}
+
+if (data.batteryCellCount == 0)
+{
+    data.batteryCellCount = 1;
 }
 
 /*
@@ -382,10 +454,23 @@ void Settings::save()
         data.sensorClearance
     );
 
-    preferences.putUShort(
+    preferences.putULong(
     KEY_MEASURE_INTERVAL,
     data.measureInterval
 );
+
+preferences.putBool(KEY_NTP_ENABLED, data.ntpEnabled);
+preferences.putString(KEY_TIME_ZONE, data.timeZone);
+preferences.putString(KEY_NTP_SERVER_1, data.ntpServer1);
+preferences.putString(KEY_NTP_SERVER_2, data.ntpServer2);
+preferences.putString(KEY_NTP_SERVER_3, data.ntpServer3);
+preferences.putUChar(KEY_NTP_TIMEOUT, data.ntpTimeoutSeconds);
+
+preferences.putFloat(KEY_BATTERY_EMPTY, data.batteryEmptyVoltage);
+preferences.putFloat(KEY_BATTERY_FULL, data.batteryFullVoltage);
+preferences.putULong(KEY_BATTERY_CAPACITY, data.batteryCapacityMah);
+preferences.putString(KEY_BATTERY_CHEMISTRY, data.batteryChemistry);
+preferences.putUChar(KEY_BATTERY_CELLS, data.batteryCellCount);
 
 preferences.putBool(
     KEY_BATTERY_ESTIMATE_TEST_MODE,

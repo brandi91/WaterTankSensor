@@ -38,6 +38,9 @@ unsigned long
 unsigned long
     MqttManager::lastPublishTime = 0;
 
+String MqttManager::discoveryStatus =
+    "Not published yet";
+
 
 /*
  * ============================================================
@@ -271,9 +274,6 @@ bool MqttManager::connect()
      * Danach kennt Home Assistant die Sensoren,
      * bevor der erste Messwert veröffentlicht wird.
      */
-    publishDiscovery();
-
-
     /*
      * Gerät als erreichbar kennzeichnen.
      */
@@ -333,6 +333,7 @@ bool MqttManager::publishDiscovery()
             "not connected"
         );
 
+        discoveryStatus = "Publish failed";
         return false;
     }
 
@@ -461,7 +462,7 @@ payload += "\",";
     payload += "\"fill_percent\":{";
 
     payload += "\"platform\":\"sensor\",";
-    payload += "\"name\":\"Füllstand\",";
+    payload += "\"name\":\"Fill Level\",";
     payload += "\"unique_id\":\"";
     payload += hardwareId;
     payload += "_fill_percent\",";
@@ -492,7 +493,7 @@ payload += "\",";
     payload += "\"water_level\":{";
 
     payload += "\"platform\":\"sensor\",";
-    payload += "\"name\":\"Wasserhöhe\",";
+    payload += "\"name\":\"Water Level\",";
     payload += "\"unique_id\":\"";
     payload += hardwareId;
     payload += "_water_level_cm\",";
@@ -524,7 +525,7 @@ payload += "\",";
     payload += "\"distance\":{";
 
     payload += "\"platform\":\"sensor\",";
-    payload += "\"name\":\"Abstand zur Wasseroberfläche\",";
+    payload += "\"name\":\"Distance to Water Surface\",";
     payload += "\"unique_id\":\"";
     payload += hardwareId;
     payload += "_distance_cm\",";
@@ -556,7 +557,7 @@ payload += "\",";
     payload += "\"battery_voltage\":{";
 
     payload += "\"platform\":\"sensor\",";
-    payload += "\"name\":\"Batteriespannung\",";
+    payload += "\"name\":\"Battery Voltage\",";
     payload += "\"unique_id\":\"";
     payload += hardwareId;
     payload += "_battery_voltage\",";
@@ -588,7 +589,7 @@ payload += "\",";
     payload += "\"battery_percent\":{";
 
     payload += "\"platform\":\"sensor\",";
-    payload += "\"name\":\"Batteriestand\",";
+    payload += "\"name\":\"Battery Level\",";
     payload += "\"unique_id\":\"";
     payload += hardwareId;
     payload += "_battery_percent\",";
@@ -639,6 +640,7 @@ payload += "\",";
 
     if (result)
     {
+        discoveryStatus = "Published";
         Logger::info(
             "Home Assistant MQTT Discovery published"
         );
@@ -650,6 +652,7 @@ payload += "\",";
     }
     else
     {
+        discoveryStatus = "Publish failed";
         Logger::warning(
             "Home Assistant MQTT Discovery publish failed"
         );
@@ -664,6 +667,26 @@ payload += "\",";
     }
 
     return result;
+}
+
+String MqttManager::getDiscoveryStatusText()
+{
+    if (!Settings::data.mqttEnabled)
+    {
+        return "Disabled";
+    }
+
+    return discoveryStatus;
+}
+
+void MqttManager::recordDiscoveryResult(
+    bool published
+)
+{
+    discoveryStatus =
+        published
+            ? "Published"
+            : "Publish failed";
 }
 
 

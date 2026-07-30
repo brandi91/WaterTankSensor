@@ -38,10 +38,6 @@ namespace
      * Unterhalb dieser Spannung betrachten wir
      * den Akku für die Schätzung als leer.
      */
-    constexpr float BATTERY_EMPTY_VOLTAGE =
-        3.20f;
-
-
     /*
      * Steigt die Spannung plötzlich um mindestens
      * 0,15 V, gehen wir von Laden oder Akkuwechsel aus.
@@ -226,8 +222,8 @@ void BatteryEstimator::addSample(
      * Ungültige Werte nicht übernehmen.
      */
     if (
-        voltage < 2.0f ||
-        voltage > 5.0f
+        !isfinite(voltage) ||
+        voltage <= 0.0f
     )
     {
         Logger::warning(
@@ -380,7 +376,7 @@ void BatteryEstimator::updateEstimate(
 
     const float remainingVoltage =
         currentVoltage -
-        BATTERY_EMPTY_VOLTAGE;
+        Settings::data.batteryEmptyVoltage;
 
     if (remainingVoltage <= 0.0f)
     {

@@ -77,7 +77,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
     font: inherit;
 }
 
@@ -548,6 +549,13 @@ input {
 .quick-status-grid {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.dashboard-time {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 5px 10px;
 }
 
 .quick-status-item {
@@ -1226,7 +1234,8 @@ input {
     font-size: 12px;
 }
 
-.settings-card input {
+.settings-card input,
+.settings-card select {
     width: 100%;
     min-width: 0;
     padding: 11px 12px;
@@ -1243,7 +1252,8 @@ input {
         box-shadow 150ms ease;
 }
 
-.settings-card input:focus {
+.settings-card input:focus,
+.settings-card select:focus {
     border-color: var(--blue);
 
     box-shadow:
@@ -1586,6 +1596,16 @@ input {
     .logs-summary-grid {
         grid-template-columns: repeat(2, 1fr);
     }
+}
+
+.input-with-unit > select {
+    min-width: 105px;
+    border-left: none;
+    border-radius:
+        0
+        var(--radius-small)
+        var(--radius-small)
+        0;
 }
 
 

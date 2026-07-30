@@ -23,6 +23,8 @@ public:
     static void disconnect();
 
     static bool publishDiscovery();
+    static String getDiscoveryStatusText();
+    static void recordDiscoveryResult(bool published);
     static bool publishStatus();
     static bool publishMeasurement();
 
@@ -37,6 +39,7 @@ private:
 
     static unsigned long lastReconnectAttempt;
     static unsigned long lastPublishTime;
+    static String discoveryStatus;
 
 
     static void callback(

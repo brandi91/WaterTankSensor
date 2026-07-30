@@ -69,7 +69,7 @@
                 <div>
                     <h2>Measurement Chart</h2>
                     <p>
-                        Percent values for the latest 10 real
+                        Percent values for the latest 10
                         measurements
                     </p>
                 </div>
@@ -83,7 +83,7 @@
             <div
                 class="logs-empty-state"
                 id="chartEmptyState">
-                No real measurements have been stored yet.
+                No measurements have been stored yet.
             </div>
 
             <div
@@ -103,8 +103,8 @@
                 <div>
                     <h2>Measurement History</h2>
                     <p>
-                        Sequence and uptime are shown because no
-                        calendar clock is available.
+                        Device timestamps are shown when NTP or a
+                        reliable estimate is available.
                     </p>
                 </div>
             </div>
@@ -114,19 +114,21 @@
                     <thead>
                         <tr>
                             <th>#</th>
+                            <th>Date/time</th>
+                            <th>Time Source</th>
                             <th>Fill</th>
                             <th>Water Level</th>
                             <th>Distance</th>
                             <th>Battery</th>
                             <th>Voltage</th>
                             <th>Sensor Status</th>
-                            <th>Time / Sequence</th>
+                            <th>Measurement Type</th>
                         </tr>
                     </thead>
 
                     <tbody id="historyTableBody">
                         <tr>
-                            <td colspan="8">
+                            <td colspan="10">
                                 No measurement history available.
                             </td>
                         </tr>
@@ -271,13 +273,20 @@
         let activeLogLevel = "ALL";
 
         function formatRecordTime(record) {
-            return (
-                "Wake " +
-                record.wakeCycle +
-                " · " +
-                record.uptimeSeconds +
-                "s uptime"
-            );
+            return record.timestamp > 0
+                ? new Date(
+                    record.timestamp * 1000
+                  ).toLocaleString()
+                : "Unavailable";
+        }
+
+        function formatTimeSource(record) {
+            const source =
+                record.timeSource ||
+                "unavailable";
+
+            return source.charAt(0).toUpperCase() +
+                source.slice(1);
         }
 
         function updateSummary() {
@@ -301,7 +310,9 @@
             document.getElementById(
                 "latestBattery"
             ).textContent = latest
-                ? latest.batteryPercent + "%"
+                ? latest.batteryValid
+                    ? latest.batteryPercent + "%"
+                    : "Unavailable"
                 : "—";
 
             document.getElementById(
@@ -321,7 +332,7 @@
                 const cell =
                     document.createElement("td");
 
-                cell.colSpan = 8;
+                cell.colSpan = 10;
                 cell.textContent =
                     "No measurement history available.";
 
@@ -339,13 +350,21 @@
 
                     const values = [
                         record.sequence,
+                        formatRecordTime(record),
+                        formatTimeSource(record),
                         record.fillPercent + "%",
                         record.waterLevelCm + " cm",
                         record.distanceCm + " cm",
-                        record.batteryPercent + "%",
-                        record.batteryVoltage + " V",
+                        record.batteryValid
+                            ? record.batteryPercent + "%"
+                            : "Unavailable",
+                        record.batteryValid
+                            ? record.batteryVoltage + " V"
+                            : "Unavailable",
                         record.sensorStatus,
-                        formatRecordTime(record)
+                        record.simulated
+                            ? "Simulated"
+                            : "Real"
                     ];
 
                     values.forEach((value) => {
@@ -627,11 +646,9 @@
                     document.createElement("span");
 
                 time.textContent =
-                    "Wake " +
-                    entry.wakeCycle +
+                    formatRecordTime(entry) +
                     " · " +
-                    entry.uptimeSeconds +
-                    "s uptime";
+                    formatTimeSource(entry);
 
                 const message =
                     document.createElement("p");

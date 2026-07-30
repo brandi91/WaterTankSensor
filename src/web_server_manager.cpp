@@ -2,6 +2,7 @@
 
 #include <WiFi.h>
 #include <LittleFS.h>
+#include <math.h>
 
 #include "battery.h"
 #include "battery_estimator.h"
@@ -12,6 +13,7 @@
 #include "sensor.h"
 #include "settings.h"
 #include "sleep_manager.h"
+#include "time_manager.h"
 #include "wifi_manager.h" 
 #include "version.h"  
 
@@ -503,7 +505,7 @@ void WebServerManager::handleStatus()
 
     String json;
 
-    json.reserve(512);
+    json.reserve(768);
 
     json += "{";
 
@@ -532,6 +534,12 @@ void WebServerManager::handleStatus()
     json += String(
         Battery::getPercentage()
     );
+    json += ",";
+
+    json += "\"batteryValid\":";
+    json += Battery::isValid()
+        ? "true"
+        : "false";
     json += ",";
 
     json += "\"batteryVoltage\":\"";
@@ -619,7 +627,38 @@ json += ",";
 
     json += "\"mqttStatusClass\":\"";
     json += getMqttStatusClass();
-    json += "\"";
+    json += "\",";
+
+    json += "\"currentTimestamp\":";
+    json += String(
+        static_cast<uint32_t>(
+            TimeManager::now()
+        )
+    );
+    json += ",";
+
+    json += "\"currentTimeValid\":";
+    json += TimeManager::hasValidTime()
+        ? "true"
+        : "false";
+    json += ",";
+
+    json += "\"timeSource\":\"";
+    json += TimeManager::getTimeSource();
+    json += "\",";
+
+    json += "\"lastNtpSync\":";
+    json += String(
+        static_cast<uint32_t>(
+            TimeManager::getLastSuccessfulSync()
+        )
+    );
+    json += ",";
+
+    json += "\"ntpEnabled\":";
+    json += Settings::data.ntpEnabled
+        ? "true"
+        : "false";
 
     json += "}";
 
@@ -779,21 +818,209 @@ void WebServerManager::handleSave()
     }
 
 
-if (server.hasArg("measureInterval"))
-{
-    const long interval =
-        server.arg(
-            "measureInterval"
-        ).toInt();
-
-    if (interval > 0)
+    auto parseUnsigned = [](
+        const String& text,
+        uint32_t& value
+    )
     {
-        Settings::data.measureInterval =
-            static_cast<uint16_t>(
-                interval
+        if (text.isEmpty())
+        {
+            return false;
+        }
+
+        char* end = nullptr;
+        const unsigned long parsed =
+            strtoul(text.c_str(), &end, 10);
+
+        if (
+            end == text.c_str() ||
+            *end != '\0'
+        )
+        {
+            return false;
+        }
+
+        value = static_cast<uint32_t>(parsed);
+        return true;
+    };
+
+    auto parseFloat = [](
+        const String& text,
+        float& value
+    )
+    {
+        if (text.isEmpty())
+        {
+            return false;
+        }
+
+        char* end = nullptr;
+        value = strtof(text.c_str(), &end);
+
+        return
+            end != text.c_str() &&
+            *end == '\0' &&
+            isfinite(value);
+    };
+
+    if (
+        server.hasArg("measureInterval") &&
+        server.hasArg("measureIntervalUnit")
+    )
+    {
+        uint32_t value = 0;
+        const String unit =
+            server.arg("measureIntervalUnit");
+        uint32_t multiplier = 0;
+
+        if (unit == "seconds")
+        {
+            multiplier = 1;
+        }
+        else if (unit == "minutes")
+        {
+            multiplier = 60;
+        }
+        else if (unit == "hours")
+        {
+            multiplier = 3600;
+        }
+
+        if (
+            parseUnsigned(
+                server.arg("measureInterval"),
+                value
+            ) &&
+            value > 0 &&
+            multiplier > 0 &&
+            value <= 86400UL / multiplier
+        )
+        {
+            Settings::data.measureInterval =
+                value * multiplier;
+        }
+        else
+        {
+            Logger::warning(
+                "Invalid measurement interval; previous value preserved"
             );
+        }
     }
-}
+
+    const bool requestedNtpEnabled =
+        server.hasArg("ntpEnabled");
+    const String ntpServer1 =
+        server.arg("ntpServer1");
+    const String ntpServer2 =
+        server.arg("ntpServer2");
+    const String ntpServer3 =
+        server.arg("ntpServer3");
+    uint32_t ntpTimeout = 0;
+    const bool ntpValid =
+        !requestedNtpEnabled ||
+        (
+            (
+                !ntpServer1.isEmpty() ||
+                !ntpServer2.isEmpty() ||
+                !ntpServer3.isEmpty()
+            ) &&
+            parseUnsigned(
+                server.arg("ntpTimeoutSeconds"),
+                ntpTimeout
+            ) &&
+            ntpTimeout >= 1 &&
+            ntpTimeout <= 30
+        );
+
+    if (ntpValid)
+    {
+        Settings::data.ntpEnabled =
+            requestedNtpEnabled;
+        Settings::data.timeZone =
+            server.arg("timeZone");
+        Settings::data.ntpServer1 = ntpServer1;
+        Settings::data.ntpServer2 = ntpServer2;
+        Settings::data.ntpServer3 = ntpServer3;
+
+        if (requestedNtpEnabled)
+        {
+            Settings::data.ntpTimeoutSeconds =
+                static_cast<uint8_t>(ntpTimeout);
+        }
+    }
+    else
+    {
+        Logger::warning(
+            "Invalid NTP settings; previous values preserved"
+        );
+    }
+
+    const float previousEmpty =
+        Settings::data.batteryEmptyVoltage;
+    const float previousFull =
+        Settings::data.batteryFullVoltage;
+    const uint32_t previousCapacity =
+        Settings::data.batteryCapacityMah;
+    const String previousChemistry =
+        Settings::data.batteryChemistry;
+    const uint8_t previousCells =
+        Settings::data.batteryCellCount;
+
+    float emptyVoltage = 0.0f;
+    float fullVoltage = 0.0f;
+    uint32_t capacity = 0;
+    uint32_t cells = 0;
+    const String chemistry =
+        server.arg("batteryChemistry");
+    const bool chemistryValid =
+        chemistry == "custom" ||
+        chemistry == "li-ion" ||
+        chemistry == "lifepo4" ||
+        chemistry == "nimh";
+    const bool batterySettingsValid =
+        parseFloat(
+            server.arg("batteryEmptyVoltage"),
+            emptyVoltage
+        ) &&
+        parseFloat(
+            server.arg("batteryFullVoltage"),
+            fullVoltage
+        ) &&
+        parseUnsigned(
+            server.arg("batteryCapacityMah"),
+            capacity
+        ) &&
+        parseUnsigned(
+            server.arg("batteryCellCount"),
+            cells
+        ) &&
+        emptyVoltage > 0.0f &&
+        fullVoltage > emptyVoltage &&
+        capacity > 0 &&
+        capacity <= 100000UL &&
+        cells >= 1 &&
+        cells <= 255 &&
+        chemistryValid;
+
+    if (batterySettingsValid)
+    {
+        Settings::data.batteryEmptyVoltage =
+            emptyVoltage;
+        Settings::data.batteryFullVoltage =
+            fullVoltage;
+        Settings::data.batteryCapacityMah =
+            capacity;
+        Settings::data.batteryChemistry =
+            chemistry;
+        Settings::data.batteryCellCount =
+            static_cast<uint8_t>(cells);
+    }
+    else
+    {
+        Logger::warning(
+            "Invalid battery configuration; previous values preserved"
+        );
+    }
 
 /*
  * Ein nicht gesetztes Checkbox-Feld wird vom
@@ -805,6 +1032,26 @@ Settings::data.batteryEstimateTestMode =
     );
 
 Settings::save();
+
+    const bool batteryConfigurationChanged =
+        previousEmpty !=
+            Settings::data.batteryEmptyVoltage ||
+        previousFull !=
+            Settings::data.batteryFullVoltage ||
+        previousCapacity !=
+            Settings::data.batteryCapacityMah ||
+        previousChemistry !=
+            Settings::data.batteryChemistry ||
+        previousCells !=
+            Settings::data.batteryCellCount;
+
+    if (batteryConfigurationChanged)
+    {
+        BatteryEstimator::reset();
+        Logger::warning(
+            "Battery configuration changed. Battery lifetime learning was reset."
+        );
+    }
 
     Logger::info(
         "Configuration saved"
@@ -879,13 +1126,16 @@ void WebServerManager::handleMeasure()
             MeasurementHistory::
                 addCurrentMeasurement();
 
-        if (
-            !historyStored &&
-            !Sensor::isSimulated()
-        )
+        if (historyStored)
+        {
+            Logger::info(
+                "Measurement history entry stored"
+            );
+        }
+        else
         {
             Logger::warning(
-                "Failed to store measurement history"
+                "Measurement history entry was not stored"
             );
         }
 
@@ -998,6 +1248,7 @@ void WebServerManager::handlePublishMqttDiscovery()
 
     if (!Settings::data.mqttEnabled)
     {
+        MqttManager::recordDiscoveryResult(false);
         Logger::warning(
             "MQTT Discovery failed: MQTT disabled in settings"
         );
@@ -1013,14 +1264,37 @@ void WebServerManager::handlePublishMqttDiscovery()
 
     if (!WifiManager::isConnected())
     {
+        WifiManager::connect();
+
+        const unsigned long startedAt = millis();
+
+        while (
+            !WifiManager::isConnected() &&
+            millis() - startedAt <
+                WIFI_CONNECT_TIMEOUT_MS
+        )
+        {
+            WifiManager::loop();
+            delay(20);
+        }
+
+        if (WifiManager::isConnected())
+        {
+            TimeManager::syncFromNtp();
+        }
+    }
+
+    if (!WifiManager::isConnected())
+    {
+        MqttManager::recordDiscoveryResult(false);
         Logger::warning(
-            "MQTT Discovery failed: Wi-Fi disconnected"
+            "MQTT Discovery failed: Wi-Fi connection failed"
         );
 
         server.send(
             503,
             "text/plain; charset=utf-8",
-            "Wi-Fi is not connected."
+            "Could not connect to Wi-Fi."
         );
 
         return;
@@ -1034,6 +1308,7 @@ void WebServerManager::handlePublishMqttDiscovery()
         !MqttManager::connect()
     )
     {
+        MqttManager::recordDiscoveryResult(false);
         Logger::warning(
             "MQTT Discovery failed: broker connection failed"
         );
@@ -1049,6 +1324,10 @@ void WebServerManager::handlePublishMqttDiscovery()
 
     const bool published =
         MqttManager::publishDiscovery();
+
+    MqttManager::recordDiscoveryResult(
+        published
+    );
 
     if (!wasAlreadyConnected)
     {
@@ -1478,11 +1757,141 @@ String WebServerManager::processTemplate(
     );
 
 
+    uint32_t intervalDisplayValue =
+        Settings::data.measureInterval;
+    String intervalDisplayUnit = "seconds";
+
+    if (
+        Settings::data.measureInterval %
+            3600UL == 0
+    )
+    {
+        intervalDisplayValue =
+            Settings::data.measureInterval /
+            3600UL;
+        intervalDisplayUnit = "hours";
+    }
+    else if (
+        Settings::data.measureInterval %
+            60UL == 0
+    )
+    {
+        intervalDisplayValue =
+            Settings::data.measureInterval /
+            60UL;
+        intervalDisplayUnit = "minutes";
+    }
+
     page.replace(
         "{{MEASURE_INTERVAL}}",
-        String(
-            Settings::data.measureInterval
-        )
+        String(intervalDisplayValue)
+    );
+
+    page.replace(
+        "{{INTERVAL_SECONDS_SELECTED}}",
+        intervalDisplayUnit == "seconds"
+            ? "selected"
+            : ""
+    );
+    page.replace(
+        "{{INTERVAL_MINUTES_SELECTED}}",
+        intervalDisplayUnit == "minutes"
+            ? "selected"
+            : ""
+    );
+    page.replace(
+        "{{INTERVAL_HOURS_SELECTED}}",
+        intervalDisplayUnit == "hours"
+            ? "selected"
+            : ""
+    );
+
+    page.replace(
+        "{{NTP_ENABLED_CHECKED}}",
+        Settings::data.ntpEnabled
+            ? "checked"
+            : ""
+    );
+    page.replace(
+        "{{TIME_ZONE}}",
+        htmlEscape(Settings::data.timeZone)
+    );
+    page.replace(
+        "{{NTP_SERVER_1}}",
+        htmlEscape(Settings::data.ntpServer1)
+    );
+    page.replace(
+        "{{NTP_SERVER_2}}",
+        htmlEscape(Settings::data.ntpServer2)
+    );
+    page.replace(
+        "{{NTP_SERVER_3}}",
+        htmlEscape(Settings::data.ntpServer3)
+    );
+    page.replace(
+        "{{NTP_TIMEOUT}}",
+        String(Settings::data.ntpTimeoutSeconds)
+    );
+
+    page.replace(
+        "{{BATTERY_EMPTY_VOLTAGE}}",
+        String(Settings::data.batteryEmptyVoltage, 2)
+    );
+    page.replace(
+        "{{BATTERY_FULL_VOLTAGE}}",
+        String(Settings::data.batteryFullVoltage, 2)
+    );
+    page.replace(
+        "{{BATTERY_CAPACITY_MAH}}",
+        String(Settings::data.batteryCapacityMah)
+    );
+    page.replace(
+        "{{BATTERY_CELL_COUNT}}",
+        String(Settings::data.batteryCellCount)
+    );
+    page.replace(
+        "{{CHEM_CUSTOM_SELECTED}}",
+        Settings::data.batteryChemistry == "custom"
+            ? "selected"
+            : ""
+    );
+    page.replace(
+        "{{CHEM_LIION_SELECTED}}",
+        Settings::data.batteryChemistry == "li-ion"
+            ? "selected"
+            : ""
+    );
+    page.replace(
+        "{{CHEM_LIFEPO4_SELECTED}}",
+        Settings::data.batteryChemistry == "lifepo4"
+            ? "selected"
+            : ""
+    );
+    page.replace(
+        "{{CHEM_NIMH_SELECTED}}",
+        Settings::data.batteryChemistry == "nimh"
+            ? "selected"
+            : ""
+    );
+    page.replace(
+        "{{BATTERY_CHEMISTRY}}",
+        htmlEscape(Settings::data.batteryChemistry)
+    );
+    page.replace(
+        "{{CURRENT_DEVICE_TIME}}",
+        htmlEscape(TimeManager::formatCurrentTime())
+    );
+    page.replace(
+        "{{TIME_SOURCE}}",
+        TimeManager::getTimeSource()
+    );
+    page.replace(
+        "{{LAST_MEASUREMENT}}",
+        Sensor::isValid()
+            ? htmlEscape(
+                TimeManager::formatCurrentTime()
+              )
+            : "Unavailable"
     );
 
     page.replace(
@@ -1532,16 +1941,23 @@ String WebServerManager::processTemplate(
         )
     );
 
-    page.replace(
-        "{{BATTERY_PERCENT}}",
-        String(
-            Battery::getPercentage()
-        )
+page.replace(
+    "{{BATTERY_PERCENT}}",
+        Battery::isValid()
+            ? String(Battery::getPercentage())
+            : "-"
     );
 
 page.replace(
     "{{BATTERY_STATUS}}",
     getBatteryStatusText()
+);
+
+page.replace(
+    "{{BATTERY_PERCENT_DISPLAY}}",
+    Battery::isValid()
+        ? String(Battery::getPercentage()) + "%"
+        : "Unavailable"
 );
 
 page.replace(
@@ -1583,9 +1999,7 @@ page.replace(
 
 page.replace(
     "{{MQTT_DISCOVERY_STATUS}}",
-    Settings::data.mqttEnabled
-        ? "Available"
-        : "Disabled"
+    MqttManager::getDiscoveryStatusText()
 );
 #else
 page.replace(
@@ -1709,6 +2123,11 @@ String WebServerManager::getBatteryStatusText()
     const int percentage =
         Battery::getPercentage();
 
+    if (!Battery::isValid())
+    {
+        return "Unavailable";
+    }
+
     if (percentage < 5)
     {
         return "Critical";
@@ -1726,6 +2145,11 @@ String WebServerManager::getBatteryStatusClass()
 {
     const int percentage =
         Battery::getPercentage();
+
+    if (!Battery::isValid())
+    {
+        return "status-neutral";
+    }
 
     if (percentage < 5)
     {

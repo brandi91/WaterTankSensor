@@ -49,7 +49,20 @@ struct SettingsData
     /*
      * Mess- und Deep-Sleep-Intervall in Sekunden.
      */
-    uint16_t measureInterval = 300;
+    uint32_t measureInterval = 300;
+
+    bool ntpEnabled = true;
+    String timeZone = "UTC0";
+    String ntpServer1 = "pool.ntp.org";
+    String ntpServer2 = "time.nist.gov";
+    String ntpServer3 = "time.google.com";
+    uint8_t ntpTimeoutSeconds = 8;
+
+    float batteryEmptyVoltage = 3.20f;
+    float batteryFullVoltage = 4.20f;
+    uint32_t batteryCapacityMah = 2000;
+    String batteryChemistry = "custom";
+    uint8_t batteryCellCount = 1;
 
     /*
      * Battery Estimate Test Mode:

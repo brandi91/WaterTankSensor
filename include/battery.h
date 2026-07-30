@@ -8,6 +8,7 @@ public:
 
     static float getVoltage();
     static int getPercentage();
+    static bool isValid();
 
     static bool isLow();
     static bool isCritical();
