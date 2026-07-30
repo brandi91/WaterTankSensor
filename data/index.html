@@ -783,11 +783,6 @@
                             minlength="8" maxlength="63" autocomplete="new-password"
                             placeholder="Leave blank to keep unchanged">
                         <small class="field-help">Leave blank to keep the current password.</small>
-                        <div class="default-credential-note">
-                            <span>Factory-default password</span>
-                            <strong>{{AP_DEFAULT_PASSWORD}}</strong>
-                        </div>
-
                         <label class="switch-row">
                             <span>Create open access point</span>
                             <span class="switch-control">
@@ -1170,22 +1165,12 @@
                 "lastUpdated"
             );
 
-        const technicalUpdated =
-            document.getElementById(
-                "technicalLastUpdated"
-            );
-
         function updateDisplayedTime() {
             const currentTime =
                 new Date().toLocaleTimeString();
 
             if (updated) {
                 updated.textContent = currentTime;
-            }
-
-            if (technicalUpdated) {
-                technicalUpdated.textContent =
-                    currentTime;
             }
         }
 

@@ -587,6 +587,28 @@ void Logger::persist(
         return;
     }
 
+    if (pendingEntryCount >= MAX_PENDING_LOG_ENTRIES)
+    {
+        flushPersistentLogs();
+    }
+
+    /*
+     * A filesystem error can leave the pending queue full. Keep it bounded
+     * and preserve the newest diagnostics instead of writing past the array.
+     */
+    if (pendingEntryCount >= MAX_PENDING_LOG_ENTRIES)
+    {
+        for (
+            size_t index = 1;
+            index < pendingEntryCount;
+            ++index
+        )
+        {
+            pendingEntries[index - 1] = pendingEntries[index];
+        }
+        pendingEntryCount--;
+    }
+
     String boundedMessage = message;
 
     if (

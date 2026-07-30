@@ -20,8 +20,6 @@ public:
 
 private:
     static float readDistance();
-    static float calculateWaterLevel(float distanceCm);
-    static int calculatePercentage(float waterLevelCm);
 
     static float distanceCm;
     static float waterLevelCm;

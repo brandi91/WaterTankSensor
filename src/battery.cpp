@@ -5,6 +5,7 @@
 #include "config.h"
 #include "logger.h"
 #include "settings.h"
+#include "core_logic.h"
 
 /*
  * Spannungsteiler:
@@ -131,48 +132,10 @@ float Battery::getVoltage()
 
 int Battery::getPercentage()
 {
-    /*
-     * Einfache lineare Anzeige für den ersten Test.
-     * Später können wir eine realistischere
-     * Li-Ion-Kennlinie verwenden.
-     */
-    if (!isValid())
-    {
-        return -1;
-    }
-
-    const float emptyVoltage =
-        Settings::data.batteryEmptyVoltage;
-    const float fullVoltage =
-        Settings::data.batteryFullVoltage;
-
-    if (
-        voltage >= fullVoltage
-    )
-    {
-        return 100;
-    }
-
-    if (
-        voltage <= emptyVoltage
-    )
-    {
-        return 0;
-    }
-
-    const float percentage =
-        (
-            voltage -
-            emptyVoltage
-        ) /
-        (
-            fullVoltage -
-            emptyVoltage
-        ) *
-        100.0f;
-
-    return static_cast<int>(
-        percentage + 0.5f
+    return CoreLogic::calculateBatteryPercentage(
+        voltage,
+        Settings::data.batteryEmptyVoltage,
+        Settings::data.batteryFullVoltage
     );
 }
 

@@ -2592,10 +2592,6 @@ void WebServerManager::processTemplate(
     page.replace("{{LAST_DHCP_DNS_2}}", suggestedDhcpDns2);
 
     page.replace("{{AP_SSID}}", htmlEscape(Settings::data.apSsid));
-    page.replace(
-        "{{AP_DEFAULT_PASSWORD}}",
-        htmlEscape(CONFIG_AP_PASSWORD)
-    );
     page.replace("{{AP_IP}}", htmlEscape(Settings::data.apIp));
     page.replace("{{AP_GATEWAY}}", htmlEscape(Settings::data.apGateway));
     page.replace("{{AP_SUBNET}}", htmlEscape(Settings::data.apSubnet));
