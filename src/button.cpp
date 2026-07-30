@@ -2,12 +2,14 @@
 
 #include "config.h"
 #include "logger.h"
+#include "settings.h"
 
 bool Button::lastStableState = HIGH;
 bool Button::lastReading = HIGH;
 
 bool Button::webServerPressSent = false;
 bool Button::configPortalPressSent = false;
+bool Button::factoryResetArmed = false;
 
 unsigned long Button::lastChangeTime = 0;
 unsigned long Button::pressedSince = 0;
@@ -17,26 +19,27 @@ ButtonEvent Button::event = ButtonEvent::None;
 void Button::begin()
 {
     pinMode(
-        PIN_BUTTON,
+        RECOVERY_BUTTON_PIN,
         INPUT_PULLUP
     );
 
     lastReading =
-        digitalRead(PIN_BUTTON);
+        digitalRead(RECOVERY_BUTTON_PIN);
 
     lastStableState =
         lastReading;
 
     Logger::info(
         "Button initialized on GPIO " +
-        String(PIN_BUTTON)
+        String(RECOVERY_BUTTON_PIN) +
+        " (fixed recovery button)"
     );
 }
 
 void Button::loop()
 {
     const bool reading =
-        digitalRead(PIN_BUTTON);
+        digitalRead(RECOVERY_BUTTON_PIN);
 
     const unsigned long now =
         millis();
@@ -76,6 +79,7 @@ void Button::loop()
 
             webServerPressSent = false;
             configPortalPressSent = false;
+            factoryResetArmed = false;
 
             Logger::info(
                 "Button raw: pressed"
@@ -94,10 +98,15 @@ void Button::loop()
              * Nur wenn keine der Haltezeiten erreicht
              * wurde, ist es ein kurzer Tastendruck.
              */
-            if (
-                !webServerPressSent &&
-                !configPortalPressSent
-            )
+            if (factoryResetArmed)
+            {
+                event = ButtonEvent::FactoryResetConfirmed;
+                factoryResetArmed = false;
+                Logger::warning(
+                    "Factory reset confirmed by button release"
+                );
+            }
+            else if (!webServerPressSent && !configPortalPressSent)
             {
                 event =
                     ButtonEvent::ShortPress;
@@ -147,6 +156,21 @@ void Button::loop()
 
         Logger::info(
             "Button held for 15 seconds"
+        );
+    }
+
+    if (
+        lastStableState == LOW &&
+        !factoryResetArmed &&
+        now - pressedSince >=
+            BUTTON_FACTORY_RESET_PRESS_MS
+    )
+    {
+        factoryResetArmed = true;
+        event = ButtonEvent::FactoryResetArmed;
+
+        Logger::warning(
+            "Factory reset armed; release button to confirm"
         );
     }
 }

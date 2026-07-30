@@ -4,6 +4,7 @@
 #include "battery_estimator.h"
 #include "button.h"
 #include "config.h"
+#include "factory_reset.h"
 #include "led.h"
 #include "logger.h"
 #include "measurement_history.h"
@@ -30,7 +31,8 @@ enum class WebIndicatorMode
 {
     Off,
     WebServer,
-    ConfigPortal
+    ConfigPortal,
+    FactoryResetArmed
 };
 
 
@@ -71,6 +73,8 @@ void updateWebIndicator()
      * trotzdem weiter.
      */
     if (
+        webIndicatorMode !=
+            WebIndicatorMode::FactoryResetArmed &&
         now - webIndicatorStartedAt >=
         WEB_LED_INDICATOR_DURATION_MS
     )
@@ -89,10 +93,12 @@ void updateWebIndicator()
         return;
     }
 
-    if (
-        now - lastWebIndicatorToggle <
-        WEB_LED_BLINK_INTERVAL_MS
-    )
+    const unsigned long indicatorInterval =
+        webIndicatorMode == WebIndicatorMode::FactoryResetArmed
+            ? FACTORY_RESET_LED_INTERVAL_MS
+            : WEB_LED_BLINK_INTERVAL_MS;
+
+    if (now - lastWebIndicatorToggle < indicatorInterval)
     {
         return;
     }
@@ -101,6 +107,19 @@ void updateWebIndicator()
 
     webIndicatorLedState =
         !webIndicatorLedState;
+
+    if (webIndicatorMode == WebIndicatorMode::FactoryResetArmed)
+    {
+        if (webIndicatorLedState)
+        {
+            Led::setColor(0, 0, 255);
+        }
+        else
+        {
+            Led::setColor(255, 0, 0);
+        }
+        return;
+    }
 
     if (!webIndicatorLedState)
     {
@@ -127,6 +146,7 @@ void updateWebIndicator()
             break;
 
         case WebIndicatorMode::Off:
+        case WebIndicatorMode::FactoryResetArmed:
         default:
             Led::off();
             break;
@@ -556,6 +576,33 @@ void setup()
     Button::begin();
     Sensor::begin();
 
+    if (FactoryReset::shouldStartConfigPortal())
+    {
+        Logger::warning(
+            "Factory reset recovery boot: starting configuration access point"
+        );
+
+        WifiManager::begin();
+        WebServerManager::beginConfigPortal();
+
+        if (WebServerManager::isConfigPortalActive())
+        {
+            FactoryReset::clearConfigPortalRequest();
+            startConfigPortalIndicator();
+            Logger::info(
+                "Factory reset complete; configuration portal active"
+            );
+        }
+        else
+        {
+            Logger::error(
+                "Configuration portal failed; recovery request retained"
+            );
+        }
+
+        return;
+    }
+
     const WakeupReason wakeupReason =
         SleepManager::getWakeupReason();
 
@@ -831,6 +878,27 @@ void loop()
                 "LED blinking red"
             );
 
+            break;
+        }
+
+        case ButtonEvent::FactoryResetArmed:
+        {
+            webIndicatorMode =
+                WebIndicatorMode::FactoryResetArmed;
+            webIndicatorLedState = false;
+            webIndicatorStartedAt = millis();
+            lastWebIndicatorToggle =
+                millis() - FACTORY_RESET_LED_INTERVAL_MS;
+
+            Logger::warning(
+                "Factory reset armed - release GPIO 33 to erase data"
+            );
+            break;
+        }
+
+        case ButtonEvent::FactoryResetConfirmed:
+        {
+            FactoryReset::execute();
             break;
         }
 

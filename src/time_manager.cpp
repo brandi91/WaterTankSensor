@@ -214,3 +214,21 @@ void TimeManager::prepareForSleep(
     rtcPlannedSleepSeconds = sleepSeconds;
     rtcEstimateAvailable = true;
 }
+
+void TimeManager::resetPersistedState()
+{
+    if (!initialized)
+    {
+        preferences.begin(PREF_NAMESPACE, false);
+    }
+    preferences.clear();
+
+    rtcTimestampAtSleep = 0;
+    rtcPlannedSleepSeconds = 0;
+    rtcEstimateAvailable = false;
+    baseTimestamp = 0;
+    baseMillis = millis();
+    lastSuccessfulSync = 0;
+    valid = false;
+    timeSource = "Unavailable";
+}

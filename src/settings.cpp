@@ -85,6 +85,14 @@ constexpr const char* KEY_BATTERY_FULL = "batFull";
 constexpr const char* KEY_BATTERY_CAPACITY = "batCapacity";
 constexpr const char* KEY_BATTERY_CHEMISTRY = "batChem";
 constexpr const char* KEY_BATTERY_CELLS = "batCells";
+constexpr const char* KEY_BUTTON_PIN = "pinButton";
+constexpr const char* KEY_STATUS_LED_PIN = "pinStatus";
+constexpr const char* KEY_LED_RED_PIN = "pinRed";
+constexpr const char* KEY_LED_GREEN_PIN = "pinGreen";
+constexpr const char* KEY_LED_BLUE_PIN = "pinBlue";
+constexpr const char* KEY_BATTERY_ADC_PIN = "pinBattery";
+constexpr const char* KEY_SENSOR_TRIGGER_PIN = "pinTrigger";
+constexpr const char* KEY_SENSOR_ECHO_PIN = "pinEcho";
 
 /*
  * Gespeicherter Schalter für den schnellen
@@ -277,6 +285,9 @@ void initializeMissingDefaults()
 
 
 SettingsData Settings::data;
+bool Settings::pinsFallback = false;
+String Settings::pinsWarning;
+SettingsData Settings::bootPins;
 
 
 void Settings::begin()
@@ -515,6 +526,47 @@ data.batteryEstimateTestMode =
         false
     );
 
+data.buttonPin = preferences.isKey(KEY_BUTTON_PIN)
+    ? preferences.getUChar(KEY_BUTTON_PIN)
+    : DEFAULT_BUTTON_PIN;
+data.statusLedPin = preferences.isKey(KEY_STATUS_LED_PIN)
+    ? preferences.getUChar(KEY_STATUS_LED_PIN)
+    : DEFAULT_STATUS_LED_PIN;
+data.ledRedPin = preferences.isKey(KEY_LED_RED_PIN)
+    ? preferences.getUChar(KEY_LED_RED_PIN)
+    : DEFAULT_LED_RED_PIN;
+data.ledGreenPin = preferences.isKey(KEY_LED_GREEN_PIN)
+    ? preferences.getUChar(KEY_LED_GREEN_PIN)
+    : DEFAULT_LED_GREEN_PIN;
+data.ledBluePin = preferences.isKey(KEY_LED_BLUE_PIN)
+    ? preferences.getUChar(KEY_LED_BLUE_PIN)
+    : DEFAULT_LED_BLUE_PIN;
+data.batteryAdcPin = preferences.isKey(KEY_BATTERY_ADC_PIN)
+    ? preferences.getUChar(KEY_BATTERY_ADC_PIN)
+    : DEFAULT_BATTERY_ADC_PIN;
+data.sensorTriggerPin = preferences.isKey(KEY_SENSOR_TRIGGER_PIN)
+    ? preferences.getUChar(KEY_SENSOR_TRIGGER_PIN)
+    : DEFAULT_SENSOR_TRIGGER_PIN;
+data.sensorEchoPin = preferences.isKey(KEY_SENSOR_ECHO_PIN)
+    ? preferences.getUChar(KEY_SENSOR_ECHO_PIN)
+    : DEFAULT_SENSOR_ECHO_PIN;
+
+String pinError;
+pinsFallback = !validatePins(data, pinError);
+if (pinsFallback)
+{
+    pinsWarning =
+        "Stored pin configuration is invalid (" + pinError +
+        "). Compile-time defaults are active for this boot.";
+    Logger::error(pinsWarning);
+    restoreDefaultPins();
+}
+else
+{
+    pinsWarning = "";
+}
+bootPins = data;
+
 Logger::info(
     "Settings loaded"
 );
@@ -658,6 +710,15 @@ preferences.putBool(
     data.batteryEstimateTestMode
 );
 
+preferences.putUChar(KEY_BUTTON_PIN, data.buttonPin);
+preferences.putUChar(KEY_STATUS_LED_PIN, data.statusLedPin);
+preferences.putUChar(KEY_LED_RED_PIN, data.ledRedPin);
+preferences.putUChar(KEY_LED_GREEN_PIN, data.ledGreenPin);
+preferences.putUChar(KEY_LED_BLUE_PIN, data.ledBluePin);
+preferences.putUChar(KEY_BATTERY_ADC_PIN, data.batteryAdcPin);
+preferences.putUChar(KEY_SENSOR_TRIGGER_PIN, data.sensorTriggerPin);
+preferences.putUChar(KEY_SENSOR_ECHO_PIN, data.sensorEchoPin);
+
 Logger::info(
     "Settings saved"
 );
@@ -673,4 +734,131 @@ void Settings::reset()
     );
 
     load();
+}
+
+namespace
+{
+bool containsPin(const uint8_t pin, const uint8_t* pins, size_t count)
+{
+    for (size_t i = 0; i < count; ++i)
+    {
+        if (pins[i] == pin)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+}
+
+bool Settings::validatePins(
+    const SettingsData& candidate,
+    String& error
+)
+{
+    // Conservative ESP32 DevKit V1 allowlists. GPIO 6-11 (flash),
+    // UART0 1/3 and unsafe strapping pins are excluded from custom use.
+    static const uint8_t outputPins[] =
+        {4, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32};
+    static const uint8_t inputPins[] =
+        {4, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32,
+         34, 35, 36, 39};
+    static const uint8_t pullupPins[] =
+        {4, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33};
+    static const uint8_t adc1Pins[] = {32, 34, 35, 36, 39};
+
+    struct PinUse
+    {
+        const char* name;
+        uint8_t pin;
+        const uint8_t* allowed;
+        size_t count;
+        uint8_t legacyDefault;
+    };
+
+    const PinUse uses[] =
+    {
+        {"Button", candidate.buttonPin, pullupPins,
+            sizeof(pullupPins), DEFAULT_BUTTON_PIN},
+        {"Status LED", candidate.statusLedPin, outputPins,
+            sizeof(outputPins), DEFAULT_STATUS_LED_PIN},
+        {"RGB LED Red", candidate.ledRedPin, outputPins,
+            sizeof(outputPins), DEFAULT_LED_RED_PIN},
+        {"RGB LED Green", candidate.ledGreenPin, outputPins,
+            sizeof(outputPins), DEFAULT_LED_GREEN_PIN},
+        {"RGB LED Blue", candidate.ledBluePin, outputPins,
+            sizeof(outputPins), DEFAULT_LED_BLUE_PIN},
+        {"Battery ADC", candidate.batteryAdcPin, adc1Pins,
+            sizeof(adc1Pins), DEFAULT_BATTERY_ADC_PIN},
+        {"Sensor Trigger", candidate.sensorTriggerPin, outputPins,
+            sizeof(outputPins), DEFAULT_SENSOR_TRIGGER_PIN},
+        {"Sensor Echo", candidate.sensorEchoPin, inputPins,
+            sizeof(inputPins), DEFAULT_SENSOR_ECHO_PIN}
+    };
+
+    for (const PinUse& use : uses)
+    {
+        if (
+            use.pin != use.legacyDefault &&
+            !containsPin(
+                use.pin,
+                use.allowed,
+                use.count / sizeof(uint8_t)
+            )
+        )
+        {
+            error =
+                String(use.name) + " cannot use GPIO " +
+                String(use.pin) + " on ESP32 DevKit V1.";
+            return false;
+        }
+    }
+
+    for (size_t first = 0; first < sizeof(uses) / sizeof(uses[0]); ++first)
+    {
+        for (
+            size_t second = first + 1;
+            second < sizeof(uses) / sizeof(uses[0]);
+            ++second
+        )
+        {
+            if (uses[first].pin == uses[second].pin)
+            {
+                error =
+                    "GPIO " + String(uses[first].pin) +
+                    " is assigned to both " + uses[first].name +
+                    " and " + uses[second].name + ".";
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+void Settings::restoreDefaultPins()
+{
+    data.buttonPin = DEFAULT_BUTTON_PIN;
+    data.statusLedPin = DEFAULT_STATUS_LED_PIN;
+    data.ledRedPin = DEFAULT_LED_RED_PIN;
+    data.ledGreenPin = DEFAULT_LED_GREEN_PIN;
+    data.ledBluePin = DEFAULT_LED_BLUE_PIN;
+    data.batteryAdcPin = DEFAULT_BATTERY_ADC_PIN;
+    data.sensorTriggerPin = DEFAULT_SENSOR_TRIGGER_PIN;
+    data.sensorEchoPin = DEFAULT_SENSOR_ECHO_PIN;
+}
+
+bool Settings::pinFallbackActive()
+{
+    return pinsFallback;
+}
+
+String Settings::pinWarning()
+{
+    return pinsWarning;
+}
+
+const SettingsData& Settings::activePins()
+{
+    return bootPins;
 }

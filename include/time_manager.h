@@ -15,6 +15,7 @@ public:
     static time_t getLastSuccessfulSync();
     static String formatCurrentTime();
     static void prepareForSleep(uint32_t sleepSeconds);
+    static void resetPersistedState();
 
 private:
     static bool initialized;

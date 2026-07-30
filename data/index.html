@@ -43,6 +43,8 @@
         <div class="header-badge">
             Firmware {{FW_VERSION}}
         </div>
+
+        <a class="navigation-button" href="/info">Device Info</a>
     </header>
 
 
@@ -335,6 +337,35 @@
             </summary>
 
             <div class="details-content">
+
+                <section class="details-group">
+                    <h3>ESP32 DevKit V1 Pin Mapping</h3>
+                    <div class="detail-row"><span>Button</span><strong>GPIO {{BUTTON_PIN_CURRENT}} (default {{BUTTON_PIN_DEFAULT}}) {{BUTTON_PIN_BADGE}}</strong></div>
+                    <div class="detail-row"><span>Status LED</span><strong>GPIO {{STATUS_LED_PIN_CURRENT}} (default {{STATUS_LED_PIN_DEFAULT}}) {{STATUS_LED_PIN_BADGE}}</strong></div>
+                    <div class="detail-row"><span>RGB LED Red</span><strong>GPIO {{LED_RED_PIN_CURRENT}} (default {{LED_RED_PIN_DEFAULT}}) {{LED_RED_PIN_BADGE}}</strong></div>
+                    <div class="detail-row"><span>RGB LED Green</span><strong>GPIO {{LED_GREEN_PIN_CURRENT}} (default {{LED_GREEN_PIN_DEFAULT}}) {{LED_GREEN_PIN_BADGE}}</strong></div>
+                    <div class="detail-row"><span>RGB LED Blue</span><strong>GPIO {{LED_BLUE_PIN_CURRENT}} (default {{LED_BLUE_PIN_DEFAULT}}) {{LED_BLUE_PIN_BADGE}}</strong></div>
+                    <div class="detail-row"><span>Battery ADC</span><strong>GPIO {{BATTERY_ADC_PIN_CURRENT}} (default {{BATTERY_ADC_PIN_DEFAULT}}) {{BATTERY_ADC_PIN_BADGE}}</strong></div>
+                    <div class="detail-row"><span>Ultrasonic Trigger</span><strong>GPIO {{SENSOR_TRIGGER_PIN_CURRENT}} (default {{SENSOR_TRIGGER_PIN_DEFAULT}}) {{SENSOR_TRIGGER_PIN_BADGE}}</strong></div>
+                    <div class="detail-row"><span>Ultrasonic Echo</span><strong>GPIO {{SENSOR_ECHO_PIN_CURRENT}} (default {{SENSOR_ECHO_PIN_DEFAULT}}) {{SENSOR_ECHO_PIN_BADGE}}</strong></div>
+                    <div class="calculation-note">Wiring overview: connect each device signal to its current configured GPIO above. Pin changes require a restart. GPIO 33 is always retained as the fixed recovery/deep-sleep wake button.</div>
+                </section>
+
+                <section class="details-group">
+                    <h3>Fixed Recovery Button</h3>
+                    <div class="detail-row"><span>Short press</span><strong>Take measurement</strong></div>
+                    <div class="detail-row"><span>Hold 5 seconds</span><strong>Start web interface</strong></div>
+                    <div class="detail-row"><span>Hold 15 seconds</span><strong>Start configuration access point</strong></div>
+                    <div class="detail-row"><span>Hold 30 seconds</span><strong>Arm factory reset</strong></div>
+                    <div class="detail-row"><span>Release after 30 seconds</span><strong>Erase settings and restart in configuration mode</strong></div>
+                    <div class="calculation-note">
+                        <strong>Warning:</strong> Factory reset removes all saved settings,
+                        measurement history, battery learning data and persistent logs.
+                    </div>
+                    <div class="calculation-note">
+                        GPIO 33 is the fixed recovery button and is not changed by custom pin configuration.
+                    </div>
+                </section>
 
                 <section class="details-group">
 
@@ -661,6 +692,44 @@
                 action="/save">
 
                 <div class="settings-grid">
+
+                    <section class="settings-card">
+                        <h3>Pin Configuration</h3>
+
+                        {{PIN_WARNING}}
+
+                        <label for="buttonPin">Button GPIO</label>
+                        <select id="buttonPin" name="buttonPin">{{BUTTON_PIN_OPTIONS}}</select>
+                        <small class="field-help">Uses INPUT_PULLUP and active-low behavior. GPIO 33 remains the fixed recovery/wake pin.</small>
+
+                        <label for="statusLedPin">Status LED GPIO</label>
+                        <select id="statusLedPin" name="statusLedPin">{{STATUS_LED_PIN_OPTIONS}}</select>
+                        <small class="field-help">Requires an output-capable GPIO.</small>
+
+                        <label for="ledRedPin">RGB LED Red GPIO</label>
+                        <select id="ledRedPin" name="ledRedPin">{{LED_RED_PIN_OPTIONS}}</select>
+
+                        <label for="ledGreenPin">RGB LED Green GPIO</label>
+                        <select id="ledGreenPin" name="ledGreenPin">{{LED_GREEN_PIN_OPTIONS}}</select>
+
+                        <label for="ledBluePin">RGB LED Blue GPIO</label>
+                        <select id="ledBluePin" name="ledBluePin">{{LED_BLUE_PIN_OPTIONS}}</select>
+                        <small class="field-help">RGB channels require separate output-capable GPIOs.</small>
+
+                        <label for="batteryAdcPin">Battery ADC GPIO</label>
+                        <select id="batteryAdcPin" name="batteryAdcPin">{{BATTERY_ADC_PIN_OPTIONS}}</select>
+                        <small class="field-help">Select an ADC1-capable input pin. ADC2 may conflict with Wi-Fi.</small>
+
+                        <label for="sensorTriggerPin">Ultrasonic Trigger GPIO</label>
+                        <select id="sensorTriggerPin" name="sensorTriggerPin">{{SENSOR_TRIGGER_PIN_OPTIONS}}</select>
+                        <small class="field-help">Requires an output-capable GPIO.</small>
+
+                        <label for="sensorEchoPin">Ultrasonic Echo GPIO</label>
+                        <select id="sensorEchoPin" name="sensorEchoPin">{{SENSOR_ECHO_PIN_OPTIONS}}</select>
+                        <small class="field-help">Input signal; use a safe 3.3 V-compatible GPIO.</small>
+
+                        <small class="field-help"><strong>Pin changes require a restart.</strong></small>
+                    </section>
 
                     <!-- Device settings -->
 
@@ -1105,6 +1174,17 @@
     Save All Settings
 </button>
 
+</form>
+
+<form
+    method="POST"
+    action="/restore-default-pins"
+    class="battery-reset-form"
+    onsubmit="return confirm('Restore all GPIO assignments to their compile-time defaults? A restart will be required.');">
+    <button type="submit" class="battery-reset-button">
+        Restore Default Pins
+    </button>
+    <small>Restores only GPIO assignments. Restart the device to apply them.</small>
 </form>
 
 

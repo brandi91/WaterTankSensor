@@ -41,7 +41,7 @@ namespace
 void Battery::begin()
 {
     pinMode(
-        PIN_BATTERY,
+        Settings::activePins().batteryAdcPin,
         INPUT
     );
 
@@ -51,7 +51,7 @@ void Battery::begin()
      * Spannungsteiler ungefähr 2,1 V am GPIO an.
      */
     analogSetPinAttenuation(
-        PIN_BATTERY,
+        Settings::activePins().batteryAdcPin,
         ADC_11db
     );
 
@@ -60,7 +60,7 @@ void Battery::begin()
 
     Logger::info(
         "Battery Manager initialized on GPIO " +
-        String(PIN_BATTERY)
+        String(Settings::activePins().batteryAdcPin)
     );
 
     Logger::info(
@@ -102,7 +102,7 @@ float Battery::readVoltage()
     {
         millivoltSum +=
             analogReadMilliVolts(
-                PIN_BATTERY
+                Settings::activePins().batteryAdcPin
             );
 
         delay(2);

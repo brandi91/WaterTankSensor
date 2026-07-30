@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include "config.h"
 
 /*
  * ============================================================
@@ -74,6 +75,15 @@ struct SettingsData
      * 30 Messpunkte und mindestens 24 Stunden.
      */
     bool batteryEstimateTestMode = false;
+
+    uint8_t buttonPin = DEFAULT_BUTTON_PIN;
+    uint8_t statusLedPin = DEFAULT_STATUS_LED_PIN;
+    uint8_t ledRedPin = DEFAULT_LED_RED_PIN;
+    uint8_t ledGreenPin = DEFAULT_LED_GREEN_PIN;
+    uint8_t ledBluePin = DEFAULT_LED_BLUE_PIN;
+    uint8_t batteryAdcPin = DEFAULT_BATTERY_ADC_PIN;
+    uint8_t sensorTriggerPin = DEFAULT_SENSOR_TRIGGER_PIN;
+    uint8_t sensorEchoPin = DEFAULT_SENSOR_ECHO_PIN;
 };
 
 
@@ -85,6 +95,19 @@ public:
     static void load();
     static void save();
     static void reset();
+    static bool validatePins(
+        const SettingsData& candidate,
+        String& error
+    );
+    static void restoreDefaultPins();
+    static bool pinFallbackActive();
+    static String pinWarning();
+    static const SettingsData& activePins();
 
     static SettingsData data;
+
+private:
+    static bool pinsFallback;
+    static String pinsWarning;
+    static SettingsData bootPins;
 };

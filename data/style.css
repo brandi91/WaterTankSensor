@@ -1598,6 +1598,17 @@ select {
     }
 }
 
+.custom-badge {
+    display: inline-block;
+    margin-left: 0.35rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
 .input-with-unit > select {
     min-width: 105px;
     border-left: none;

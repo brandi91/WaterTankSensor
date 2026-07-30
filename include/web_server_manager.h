@@ -37,11 +37,13 @@ private:
     static void registerRoutes();
 
     static void handleRoot();
+    static void handleInfo();
     static void handleLogs();
     static void handleStatus();
     static void handleHistoryApi();
     static void handleLogsApi();
     static void handleSave();
+    static void handleRestoreDefaultPins();
     static void handleMeasure();
     static void handlePublishMqttDiscovery();
     static void handleResetBatteryEstimate();
@@ -79,5 +81,10 @@ private:
 
     static String htmlEscape(
         const String& value
+    );
+    static String pinOptions(
+        uint8_t selected,
+        const uint8_t* pins,
+        size_t count
     );
 };

@@ -16,8 +16,15 @@ bool Sensor::measurementAttempted = false;
 
 void Sensor::begin()
 {
+    pinMode(Settings::activePins().sensorTriggerPin, OUTPUT);
+    digitalWrite(Settings::activePins().sensorTriggerPin, LOW);
+    pinMode(Settings::activePins().sensorEchoPin, INPUT);
+
     Logger::info(
-        "Sensor Manager initialized"
+        "Sensor Manager initialized on trigger GPIO " +
+        String(Settings::activePins().sensorTriggerPin) +
+        " and echo GPIO " +
+        String(Settings::activePins().sensorEchoPin)
     );
 }
 

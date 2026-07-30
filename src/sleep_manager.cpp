@@ -100,7 +100,7 @@ void SleepManager::sleepForSeconds(
 
     esp_sleep_enable_ext0_wakeup(
         static_cast<gpio_num_t>(
-            PIN_BUTTON
+            RECOVERY_BUTTON_PIN
         ),
         BUTTON_WAKEUP_LEVEL
     );

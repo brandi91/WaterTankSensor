@@ -234,6 +234,12 @@ void WebServerManager::registerRoutes()
     );
 
     server.on(
+        "/info",
+        HTTP_GET,
+        handleInfo
+    );
+
+    server.on(
         "/status",
         HTTP_GET,
         handleStatus
@@ -261,6 +267,12 @@ void WebServerManager::registerRoutes()
         "/save",
         HTTP_POST,
         handleSave
+    );
+
+    server.on(
+        "/restore-default-pins",
+        HTTP_POST,
+        handleRestoreDefaultPins
     );
 
     server.on(
@@ -411,6 +423,13 @@ void WebServerManager::handleLogs()
 
     sendTemplate(
         "/logs.html"
+    );
+}
+
+void WebServerManager::handleInfo()
+{
+    sendTemplate(
+        "/info.html"
     );
 }
 
@@ -676,6 +695,64 @@ json += ",";
 
 void WebServerManager::handleSave()
 {
+    SettingsData candidate = Settings::data;
+    const char* pinArguments[] =
+    {
+        "buttonPin", "statusLedPin", "ledRedPin", "ledGreenPin",
+        "ledBluePin", "batteryAdcPin", "sensorTriggerPin", "sensorEchoPin"
+    };
+    uint8_t* candidatePins[] =
+    {
+        &candidate.buttonPin, &candidate.statusLedPin, &candidate.ledRedPin,
+        &candidate.ledGreenPin, &candidate.ledBluePin,
+        &candidate.batteryAdcPin, &candidate.sensorTriggerPin,
+        &candidate.sensorEchoPin
+    };
+
+    for (size_t i = 0; i < sizeof(pinArguments) / sizeof(pinArguments[0]); ++i)
+    {
+        if (!server.hasArg(pinArguments[i]))
+        {
+            server.send(
+                400,
+                "text/plain; charset=utf-8",
+                String("Missing pin field: ") + pinArguments[i]
+            );
+            return;
+        }
+
+        const String value = server.arg(pinArguments[i]);
+        char* end = nullptr;
+        const long pin = strtol(value.c_str(), &end, 10);
+        if (end == value.c_str() || *end != '\0' || pin < 0 || pin > 39)
+        {
+            server.send(
+                400,
+                "text/plain; charset=utf-8",
+                String("Invalid GPIO value for ") + pinArguments[i] + "."
+            );
+            return;
+        }
+        *candidatePins[i] = static_cast<uint8_t>(pin);
+    }
+
+    String pinError;
+    if (!Settings::validatePins(candidate, pinError))
+    {
+        Logger::warning("Pin configuration rejected: " + pinError);
+        server.send(400, "text/plain; charset=utf-8", pinError);
+        return;
+    }
+
+    Settings::data.buttonPin = candidate.buttonPin;
+    Settings::data.statusLedPin = candidate.statusLedPin;
+    Settings::data.ledRedPin = candidate.ledRedPin;
+    Settings::data.ledGreenPin = candidate.ledGreenPin;
+    Settings::data.ledBluePin = candidate.ledBluePin;
+    Settings::data.batteryAdcPin = candidate.batteryAdcPin;
+    Settings::data.sensorTriggerPin = candidate.sensorTriggerPin;
+    Settings::data.sensorEchoPin = candidate.sensorEchoPin;
+
     if (server.hasArg("deviceName"))
     {
         const String deviceName =
@@ -1059,6 +1136,24 @@ Settings::save();
 
     sendTemplate(
         "/saved.html"
+    );
+}
+
+void WebServerManager::handleRestoreDefaultPins()
+{
+    Settings::restoreDefaultPins();
+    Settings::save();
+    Logger::warning("Default pin configuration restored; restart required");
+    server.send(
+        200,
+        "text/html; charset=utf-8",
+        "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
+        "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+        "<link rel=\"stylesheet\" href=\"/style.css\"><title>Pins restored</title>"
+        "</head><body><main class=\"message-page\"><section class=\"message-card\">"
+        "<h1>Default pin configuration restored</h1>"
+        "<p>Default pin configuration restored. Restart the device to apply the changes.</p>"
+        "<a href=\"/\">Return to dashboard</a></section></main></body></html>"
     );
 }
 
@@ -1602,6 +1697,26 @@ void WebServerManager::processTemplate(
     );
 
     page.replace(
+        "{{BOARD_TYPE}}",
+        "DOIT ESP32 DevKit V1"
+    );
+
+    page.replace(
+        "{{MEASURE_INTERVAL_SECONDS}}",
+        String(Settings::data.measureInterval)
+    );
+
+    page.replace(
+        "{{RECOVERY_PIN_CURRENT}}",
+        String(RECOVERY_BUTTON_PIN)
+    );
+
+    page.replace(
+        "{{RECOVERY_PIN_DEFAULT}}",
+        String(RECOVERY_BUTTON_PIN)
+    );
+
+    page.replace(
         "{{IP_ADDRESS}}",
         getIpAddress()
     );
@@ -2053,6 +2168,78 @@ page.replace(
         : "Normal mode"
 );
 
+static const uint8_t outputPins[] =
+    {4, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32};
+static const uint8_t buttonPins[] =
+    {4, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33};
+static const uint8_t inputPins[] =
+    {4, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 34, 35, 36, 39};
+static const uint8_t adcPins[] = {32, 34, 35, 36, 39};
+static const uint8_t statusPins[] =
+    {2, 4, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32};
+static const uint8_t triggerPins[] =
+    {5, 4, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32};
+
+page.replace("{{BUTTON_PIN_OPTIONS}}",
+    pinOptions(Settings::data.buttonPin, buttonPins, sizeof(buttonPins)));
+page.replace("{{STATUS_LED_PIN_OPTIONS}}",
+    pinOptions(Settings::data.statusLedPin, statusPins, sizeof(statusPins)));
+page.replace("{{LED_RED_PIN_OPTIONS}}",
+    pinOptions(Settings::data.ledRedPin, outputPins, sizeof(outputPins)));
+page.replace("{{LED_GREEN_PIN_OPTIONS}}",
+    pinOptions(Settings::data.ledGreenPin, outputPins, sizeof(outputPins)));
+page.replace("{{LED_BLUE_PIN_OPTIONS}}",
+    pinOptions(Settings::data.ledBluePin, outputPins, sizeof(outputPins)));
+page.replace("{{BATTERY_ADC_PIN_OPTIONS}}",
+    pinOptions(Settings::data.batteryAdcPin, adcPins, sizeof(adcPins)));
+page.replace("{{SENSOR_TRIGGER_PIN_OPTIONS}}",
+    pinOptions(Settings::data.sensorTriggerPin, triggerPins, sizeof(triggerPins)));
+page.replace("{{SENSOR_ECHO_PIN_OPTIONS}}",
+    pinOptions(Settings::data.sensorEchoPin, inputPins, sizeof(inputPins)));
+
+#define PIN_TEMPLATE(name, field, defaultValue) \
+    page.replace("{{" name "_CURRENT}}", String(Settings::data.field)); \
+    page.replace("{{" name "_DEFAULT}}", String(defaultValue)); \
+    page.replace("{{" name "_BADGE}}", \
+        Settings::data.field == defaultValue ? "" : "<span class=\"custom-badge\">Custom</span>")
+
+PIN_TEMPLATE("BUTTON_PIN", buttonPin, DEFAULT_BUTTON_PIN);
+PIN_TEMPLATE("STATUS_LED_PIN", statusLedPin, DEFAULT_STATUS_LED_PIN);
+PIN_TEMPLATE("LED_RED_PIN", ledRedPin, DEFAULT_LED_RED_PIN);
+PIN_TEMPLATE("LED_GREEN_PIN", ledGreenPin, DEFAULT_LED_GREEN_PIN);
+PIN_TEMPLATE("LED_BLUE_PIN", ledBluePin, DEFAULT_LED_BLUE_PIN);
+PIN_TEMPLATE("BATTERY_ADC_PIN", batteryAdcPin, DEFAULT_BATTERY_ADC_PIN);
+PIN_TEMPLATE("SENSOR_TRIGGER_PIN", sensorTriggerPin, DEFAULT_SENSOR_TRIGGER_PIN);
+PIN_TEMPLATE("SENSOR_ECHO_PIN", sensorEchoPin, DEFAULT_SENSOR_ECHO_PIN);
+#undef PIN_TEMPLATE
+
+page.replace(
+    "{{PIN_WARNING}}",
+    Settings::pinFallbackActive()
+        ? "<div class=\"calculation-note\">" +
+            htmlEscape(Settings::pinWarning()) + "</div>"
+        : ""
+);
+
+}
+
+String WebServerManager::pinOptions(
+    uint8_t selected,
+    const uint8_t* pins,
+    size_t count
+)
+{
+    String options;
+    for (size_t i = 0; i < count; ++i)
+    {
+        options += "<option value=\"" + String(pins[i]) + "\"";
+        if (pins[i] == selected)
+        {
+            options += " selected";
+        }
+        options += ">GPIO " + String(pins[i]) + "</option>";
+    }
+    return options;
 }
 
 String WebServerManager::getIpAddress()

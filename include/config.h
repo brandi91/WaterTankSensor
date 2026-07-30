@@ -13,8 +13,8 @@
  * ============================================================
  */
 
-#define PIN_TRIGGER 5
-#define PIN_ECHO 18
+#define DEFAULT_SENSOR_TRIGGER_PIN 5
+#define DEFAULT_SENSOR_ECHO_PIN 18
 
 
 /*
@@ -23,7 +23,7 @@
  * ============================================================
  */
 
-#define PIN_STATUS_LED 2
+#define DEFAULT_STATUS_LED_PIN 2
 
 
 /*
@@ -35,9 +35,9 @@
  * false = gemeinsame Anode
  */
 
-#define PIN_RGB_RED 25
-#define PIN_RGB_GREEN 26
-#define PIN_RGB_BLUE 27
+#define DEFAULT_LED_RED_PIN 25
+#define DEFAULT_LED_GREEN_PIN 26
+#define DEFAULT_LED_BLUE_PIN 27
 
 #define RGB_COMMON_CATHODE true
 
@@ -53,7 +53,13 @@
  * Gedrückt       = LOW
  */
 
-#define PIN_BUTTON 33
+#define DEFAULT_BUTTON_PIN 33
+
+/*
+ * This fixed pin is deliberately not configurable. It remains the
+ * deep-sleep wake/recovery input even when the normal button is moved.
+ */
+#define RECOVERY_BUTTON_PIN DEFAULT_BUTTON_PIN
 
 // Entprellzeit des Tasters
 #define BUTTON_DEBOUNCE_MS 50UL
@@ -69,6 +75,9 @@
  * Konfigurations-AP und Webserver starten.
  */
 #define BUTTON_CONFIG_PORTAL_PRESS_MS 15000UL
+
+#define BUTTON_FACTORY_RESET_PRESS_MS 30000UL
+#define FACTORY_RESET_LED_INTERVAL_MS 300UL
 
 
 /*
@@ -90,7 +99,7 @@
  * ============================================================
  */
 
-#define PIN_BATTERY 34
+#define DEFAULT_BATTERY_ADC_PIN 34
 
 
 /*

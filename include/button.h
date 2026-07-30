@@ -7,7 +7,9 @@ enum class ButtonEvent
     None,
     ShortPress,
     WebServerPress,
-    ConfigPortalPress
+    ConfigPortalPress,
+    FactoryResetArmed,
+    FactoryResetConfirmed
 };
 
 class Button
@@ -23,6 +25,7 @@ private:
 
     static bool webServerPressSent;
     static bool configPortalPressSent;
+    static bool factoryResetArmed;
 
     static unsigned long lastChangeTime;
     static unsigned long pressedSince;

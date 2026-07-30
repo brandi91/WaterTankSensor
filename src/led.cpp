@@ -1,5 +1,6 @@
 #include "led.h"
 #include "config.h"
+#include "settings.h"
 
 const int RED_CHANNEL = 0;
 const int GREEN_CHANNEL = 1;
@@ -7,15 +8,15 @@ const int BLUE_CHANNEL = 2;
 
 void Led::begin()
 {
-    pinMode(PIN_STATUS_LED, OUTPUT);
+    pinMode(Settings::activePins().statusLedPin, OUTPUT);
 
     ledcSetup(RED_CHANNEL, 5000, 8);
     ledcSetup(GREEN_CHANNEL, 5000, 8);
     ledcSetup(BLUE_CHANNEL, 5000, 8);
 
-    ledcAttachPin(PIN_RGB_RED, RED_CHANNEL);
-    ledcAttachPin(PIN_RGB_GREEN, GREEN_CHANNEL);
-    ledcAttachPin(PIN_RGB_BLUE, BLUE_CHANNEL);
+    ledcAttachPin(Settings::activePins().ledRedPin, RED_CHANNEL);
+    ledcAttachPin(Settings::activePins().ledGreenPin, GREEN_CHANNEL);
+    ledcAttachPin(Settings::activePins().ledBluePin, BLUE_CHANNEL);
 
     off();
 }
