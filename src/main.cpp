@@ -44,7 +44,6 @@ bool webIndicatorLedState = false;
 
 unsigned long lastWebIndicatorToggle = 0;
 unsigned long webIndicatorStartedAt = 0;
-unsigned long lastBatteryLog = 0;
 bool timeSyncAttempted = false;
 unsigned long lastAutomaticMeasurementAt = 0;
 bool awakeServicesInitialized = false;
@@ -266,6 +265,19 @@ bool performMeasurement(
      * aktualisieren.
      */
     Battery::loop();
+
+    Logger::info(
+        "Battery: " +
+        String(
+            Battery::getVoltage(),
+            2
+        ) +
+        " V (" +
+        String(
+            Battery::getPercentage()
+        ) +
+        "%)"
+    );
 
     const bool measurementSuccessful =
         Sensor::measure();
@@ -792,7 +804,6 @@ void loop()
     }
 
     Button::loop();
-    Battery::loop();
     Sensor::loop();
     WifiManager::loop();
 
@@ -996,27 +1007,6 @@ void loop()
             )
         );
         enterNormalDeepSleep();
-    }
-
-    if (
-        now - lastBatteryLog >=
-        5000UL
-    )
-    {
-        lastBatteryLog = now;
-
-        Logger::info(
-            "Battery: " +
-            String(
-                Battery::getVoltage(),
-                2
-            ) +
-            " V (" +
-            String(
-                Battery::getPercentage()
-            ) +
-            "%)"
-        );
     }
 
     delay(5);

@@ -52,7 +52,7 @@ void FactoryReset::execute()
 bool FactoryReset::shouldStartConfigPortal()
 {
     Preferences recovery;
-    if (!recovery.begin(RECOVERY_NAMESPACE, true))
+    if (!recovery.begin(RECOVERY_NAMESPACE, false))
     {
         return false;
     }

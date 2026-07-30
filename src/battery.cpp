@@ -31,12 +31,7 @@ namespace
 
     constexpr uint8_t BATTERY_SAMPLE_COUNT = 32;
 
-    constexpr unsigned long BATTERY_READ_INTERVAL_MS =
-        1000UL;
-
     float voltage = 0.0f;
-
-    unsigned long lastReadAt = 0;
 }
 
 void Battery::begin()
@@ -57,7 +52,6 @@ void Battery::begin()
     );
 
     voltage = readVoltage();
-    lastReadAt = millis();
 
     Logger::info(
         "Battery Manager initialized on GPIO " +
@@ -73,17 +67,6 @@ void Battery::begin()
 
 void Battery::loop()
 {
-    const unsigned long now = millis();
-
-    if (
-        now - lastReadAt <
-        BATTERY_READ_INTERVAL_MS
-    )
-    {
-        return;
-    }
-
-    lastReadAt = now;
     voltage = readVoltage();
 }
 
