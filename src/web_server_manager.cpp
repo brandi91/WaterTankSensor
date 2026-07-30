@@ -8,6 +8,7 @@
 #include "config.h"
 #include "led.h"
 #include "logger.h"
+#include "measurement_history.h"
 #include "sensor.h"
 #include "settings.h"
 #include "sleep_manager.h"
@@ -161,6 +162,8 @@ void WebServerManager::loop()
             "Restarting ESP32 now"
         );
 
+        Logger::flushPersistentLogs();
+
         Serial.flush();
         ESP.restart();
     }
@@ -232,6 +235,24 @@ void WebServerManager::registerRoutes()
     );
 
     server.on(
+        "/logs",
+        HTTP_GET,
+        handleLogs
+    );
+
+    server.on(
+        "/api/history",
+        HTTP_GET,
+        handleHistoryApi
+    );
+
+    server.on(
+        "/api/logs",
+        HTTP_GET,
+        handleLogsApi
+    );
+
+    server.on(
         "/save",
         HTTP_POST,
         handleSave
@@ -254,6 +275,18 @@ server.on(
     HTTP_POST,
     handlePublishMqttDiscovery
 );
+
+    server.on(
+        "/clear-history",
+        HTTP_POST,
+        handleClearHistory
+    );
+
+    server.on(
+        "/clear-logs",
+        HTTP_POST,
+        handleClearLogs
+    );
 
 server.on(
     "/sleep",
@@ -351,6 +384,56 @@ void WebServerManager::handleRoot()
 
     sendTemplate(
         "/index.html"
+    );
+}
+
+void WebServerManager::handleLogs()
+{
+    server.sendHeader(
+        "Cache-Control",
+        "no-cache, no-store, must-revalidate"
+    );
+
+    server.sendHeader(
+        "Pragma",
+        "no-cache"
+    );
+
+    server.sendHeader(
+        "Expires",
+        "0"
+    );
+
+    sendTemplate(
+        "/logs.html"
+    );
+}
+
+void WebServerManager::handleHistoryApi()
+{
+    server.sendHeader(
+        "Cache-Control",
+        "no-cache, no-store, must-revalidate"
+    );
+
+    server.send(
+        200,
+        "application/json; charset=utf-8",
+        MeasurementHistory::toJson()
+    );
+}
+
+void WebServerManager::handleLogsApi()
+{
+    server.sendHeader(
+        "Cache-Control",
+        "no-cache, no-store, must-revalidate"
+    );
+
+    server.send(
+        200,
+        "application/json; charset=utf-8",
+        Logger::getPersistentLogsJson()
     );
 }
 
@@ -769,6 +852,9 @@ void WebServerManager::handleMeasure()
             "Web measurement successful"
         );
 
+        MeasurementHistory::
+            addCurrentMeasurement();
+
 #if MQTT_ENABLED
         MqttManager::publishMeasurement();
 #endif
@@ -834,6 +920,40 @@ void WebServerManager::handleResetBatteryEstimate()
         ""
     );
 }
+void WebServerManager::handleClearHistory()
+{
+    MeasurementHistory::clear();
+
+    server.sendHeader(
+        "Location",
+        "/logs",
+        true
+    );
+
+    server.send(
+        303,
+        "text/plain",
+        ""
+    );
+}
+
+void WebServerManager::handleClearLogs()
+{
+    Logger::clearPersistentLogs();
+
+    server.sendHeader(
+        "Location",
+        "/logs",
+        true
+    );
+
+    server.send(
+        303,
+        "text/plain",
+        ""
+    );
+}
+
 void WebServerManager::handlePublishMqttDiscovery()
 {
     Logger::info(

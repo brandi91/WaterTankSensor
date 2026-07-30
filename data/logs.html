@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1">
+
+    <meta
+        http-equiv="Cache-Control"
+        content="no-cache, no-store, must-revalidate">
+
+    <title>History &amp; Logs</title>
+
+    <link
+        rel="stylesheet"
+        href="/style.css">
+</head>
+
+<body>
+<div class="page-shell">
+
+    <header class="page-header logs-header">
+        <div>
+            <span class="logs-device-name">
+                {{DEVICE_NAME}}
+            </span>
+
+            <h1>History &amp; Logs</h1>
+            <p>Persistent measurements and device events</p>
+        </div>
+
+        <a
+            class="navigation-button"
+            href="/">
+            Back to Dashboard
+        </a>
+    </header>
+
+    <main>
+
+        <section class="logs-summary-grid">
+
+            <article class="panel summary-card">
+                <span>Stored Measurements</span>
+                <strong id="measurementCount">0</strong>
+            </article>
+
+            <article class="panel summary-card">
+                <span>Latest Fill</span>
+                <strong id="latestFill">—</strong>
+            </article>
+
+            <article class="panel summary-card">
+                <span>Latest Battery</span>
+                <strong id="latestBattery">—</strong>
+            </article>
+
+            <article class="panel summary-card">
+                <span>Latest Sensor Result</span>
+                <strong id="latestSensor">No history</strong>
+            </article>
+
+        </section>
+
+        <section class="panel logs-section">
+            <div class="logs-section-heading">
+                <div>
+                    <h2>Measurement Chart</h2>
+                    <p>
+                        Percent values for the latest 10 real
+                        measurements
+                    </p>
+                </div>
+
+                <div class="chart-legend">
+                    <span class="legend-fill">Fill</span>
+                    <span class="legend-battery">Battery</span>
+                </div>
+            </div>
+
+            <div
+                class="logs-empty-state"
+                id="chartEmptyState">
+                No real measurements have been stored yet.
+            </div>
+
+            <div
+                class="history-chart-wrapper"
+                id="chartWrapper"
+                hidden>
+
+                <canvas
+                    id="historyChart"
+                    height="320">
+                </canvas>
+            </div>
+        </section>
+
+        <section class="panel logs-section">
+            <div class="logs-section-heading">
+                <div>
+                    <h2>Measurement History</h2>
+                    <p>
+                        Sequence and uptime are shown because no
+                        calendar clock is available.
+                    </p>
+                </div>
+            </div>
+
+            <div class="table-scroll">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Fill</th>
+                            <th>Water Level</th>
+                            <th>Distance</th>
+                            <th>Battery</th>
+                            <th>Voltage</th>
+                            <th>Sensor Status</th>
+                            <th>Time / Sequence</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="historyTableBody">
+                        <tr>
+                            <td colspan="8">
+                                No measurement history available.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <form
+                method="POST"
+                action="/clear-history"
+                class="clear-data-form"
+                onsubmit="return confirm(
+                    'Clear all stored measurement history?'
+                );">
+
+                <button
+                    type="submit"
+                    class="clear-data-button">
+                    Clear Measurement History
+                </button>
+            </form>
+        </section>
+
+        <section class="panel logs-section">
+            <div class="logs-section-heading logs-heading-responsive">
+                <div>
+                    <h2>Device Logs</h2>
+                    <p>
+                        Newest meaningful lifecycle and fault
+                        messages first
+                    </p>
+                </div>
+
+                <div
+                    class="log-filters"
+                    role="group"
+                    aria-label="Filter device logs">
+
+                    <button
+                        type="button"
+                        class="log-filter active"
+                        data-level="ALL">
+                        All
+                    </button>
+
+                    <button
+                        type="button"
+                        class="log-filter"
+                        data-level="INFO">
+                        Info
+                    </button>
+
+                    <button
+                        type="button"
+                        class="log-filter"
+                        data-level="WARNING">
+                        Warning
+                    </button>
+
+                    <button
+                        type="button"
+                        class="log-filter"
+                        data-level="ERROR">
+                        Error
+                    </button>
+                </div>
+            </div>
+
+            <div
+                class="device-log-list"
+                id="deviceLogList">
+                <div class="logs-empty-state">
+                    No persistent logs available.
+                </div>
+            </div>
+
+            <form
+                method="POST"
+                action="/clear-logs"
+                class="clear-data-form"
+                onsubmit="return confirm(
+                    'Clear all persistent device logs?'
+                );">
+
+                <button
+                    type="submit"
+                    class="clear-data-button">
+                    Clear Device Logs
+                </button>
+            </form>
+        </section>
+
+        <div
+            class="logs-api-warning"
+            id="apiWarning"
+            role="status"
+            hidden>
+        </div>
+
+    </main>
+
+    <footer class="page-footer">
+        Water Tank Sensor · Firmware {{FW_VERSION}}
+    </footer>
+
+</div>
+
+<script>
+    (function () {
+        const historyTableBody =
+            document.getElementById(
+                "historyTableBody"
+            );
+
+        const chart =
+            document.getElementById(
+                "historyChart"
+            );
+
+        const chartWrapper =
+            document.getElementById(
+                "chartWrapper"
+            );
+
+        const chartEmptyState =
+            document.getElementById(
+                "chartEmptyState"
+            );
+
+        const deviceLogList =
+            document.getElementById(
+                "deviceLogList"
+            );
+
+        const apiWarning =
+            document.getElementById(
+                "apiWarning"
+            );
+
+        let measurements = [];
+        let logs = [];
+        let activeLogLevel = "ALL";
+
+        function formatRecordTime(record) {
+            return (
+                "Wake " +
+                record.wakeCycle +
+                " · " +
+                record.uptimeSeconds +
+                "s uptime"
+            );
+        }
+
+        function updateSummary() {
+            const latest =
+                measurements.length > 0
+                    ? measurements[
+                        measurements.length - 1
+                      ]
+                    : null;
+
+            document.getElementById(
+                "measurementCount"
+            ).textContent = measurements.length;
+
+            document.getElementById(
+                "latestFill"
+            ).textContent = latest
+                ? latest.fillPercent + "%"
+                : "—";
+
+            document.getElementById(
+                "latestBattery"
+            ).textContent = latest
+                ? latest.batteryPercent + "%"
+                : "—";
+
+            document.getElementById(
+                "latestSensor"
+            ).textContent = latest
+                ? latest.sensorStatus
+                : "No history";
+        }
+
+        function renderHistoryTable() {
+            historyTableBody.replaceChildren();
+
+            if (measurements.length === 0) {
+                const row =
+                    document.createElement("tr");
+
+                const cell =
+                    document.createElement("td");
+
+                cell.colSpan = 8;
+                cell.textContent =
+                    "No measurement history available.";
+
+                row.appendChild(cell);
+                historyTableBody.appendChild(row);
+                return;
+            }
+
+            measurements
+                .slice()
+                .reverse()
+                .forEach((record) => {
+                    const row =
+                        document.createElement("tr");
+
+                    const values = [
+                        record.sequence,
+                        record.fillPercent + "%",
+                        record.waterLevelCm + " cm",
+                        record.distanceCm + " cm",
+                        record.batteryPercent + "%",
+                        record.batteryVoltage + " V",
+                        record.sensorStatus,
+                        formatRecordTime(record)
+                    ];
+
+                    values.forEach((value) => {
+                        const cell =
+                            document.createElement("td");
+
+                        cell.textContent = value;
+                        row.appendChild(cell);
+                    });
+
+                    historyTableBody.appendChild(row);
+                });
+        }
+
+        function drawChart() {
+            if (
+                !chart ||
+                measurements.length === 0
+            ) {
+                chartWrapper.hidden = true;
+                chartEmptyState.hidden = false;
+                return;
+            }
+
+            chartWrapper.hidden = false;
+            chartEmptyState.hidden = true;
+
+            const bounds =
+                chartWrapper.getBoundingClientRect();
+
+            const pixelRatio =
+                window.devicePixelRatio || 1;
+
+            const width =
+                Math.max(
+                    320,
+                    Math.floor(bounds.width)
+                );
+
+            const height = 320;
+
+            chart.width = width * pixelRatio;
+            chart.height = height * pixelRatio;
+            chart.style.width = width + "px";
+            chart.style.height = height + "px";
+
+            const context =
+                chart.getContext("2d");
+
+            context.setTransform(
+                pixelRatio,
+                0,
+                0,
+                pixelRatio,
+                0,
+                0
+            );
+
+            context.clearRect(
+                0,
+                0,
+                width,
+                height
+            );
+
+            const margin = {
+                top: 22,
+                right: 24,
+                bottom: 48,
+                left: 48
+            };
+
+            const plotWidth =
+                width -
+                margin.left -
+                margin.right;
+
+            const plotHeight =
+                height -
+                margin.top -
+                margin.bottom;
+
+            context.font =
+                "12px system-ui, sans-serif";
+
+            context.lineWidth = 1;
+
+            [0, 25, 50, 75, 100].forEach(
+                (value) => {
+                    const y =
+                        margin.top +
+                        plotHeight *
+                        (1 - value / 100);
+
+                    context.strokeStyle =
+                        "rgba(113, 128, 152, 0.24)";
+
+                    context.beginPath();
+                    context.moveTo(margin.left, y);
+                    context.lineTo(
+                        margin.left + plotWidth,
+                        y
+                    );
+                    context.stroke();
+
+                    context.fillStyle = "#718098";
+                    context.textAlign = "right";
+                    context.fillText(
+                        value + "%",
+                        margin.left - 8,
+                        y + 4
+                    );
+                }
+            );
+
+            function pointFor(
+                record,
+                index,
+                field
+            ) {
+                const denominator =
+                    Math.max(
+                        1,
+                        measurements.length - 1
+                    );
+
+                return {
+                    x:
+                        margin.left +
+                        plotWidth *
+                        (index / denominator),
+                    y:
+                        margin.top +
+                        plotHeight *
+                        (
+                            1 -
+                            Number(record[field]) /
+                            100
+                        )
+                };
+            }
+
+            function drawSeries(
+                field,
+                color
+            ) {
+                context.strokeStyle = color;
+                context.fillStyle = color;
+                context.lineWidth = 2.5;
+                context.beginPath();
+
+                measurements.forEach(
+                    (record, index) => {
+                        const point =
+                            pointFor(
+                                record,
+                                index,
+                                field
+                            );
+
+                        if (index === 0) {
+                            context.moveTo(
+                                point.x,
+                                point.y
+                            );
+                        }
+                        else {
+                            context.lineTo(
+                                point.x,
+                                point.y
+                            );
+                        }
+                    }
+                );
+
+                context.stroke();
+
+                measurements.forEach(
+                    (record, index) => {
+                        const point =
+                            pointFor(
+                                record,
+                                index,
+                                field
+                            );
+
+                        context.beginPath();
+                        context.arc(
+                            point.x,
+                            point.y,
+                            4,
+                            0,
+                            Math.PI * 2
+                        );
+                        context.fill();
+                    }
+                );
+            }
+
+            drawSeries(
+                "fillPercent",
+                "#2d8cff"
+            );
+
+            drawSeries(
+                "batteryPercent",
+                "#18d477"
+            );
+
+            context.fillStyle = "#aab7ca";
+            context.textAlign = "center";
+
+            measurements.forEach(
+                (record, index) => {
+                    const point =
+                        pointFor(
+                            record,
+                            index,
+                            "fillPercent"
+                        );
+
+                    context.fillText(
+                        "#" + record.sequence,
+                        point.x,
+                        height - 18
+                    );
+                }
+            );
+        }
+
+        function renderLogs() {
+            deviceLogList.replaceChildren();
+
+            const visibleLogs =
+                activeLogLevel === "ALL"
+                    ? logs
+                    : logs.filter(
+                        (entry) =>
+                            entry.level ===
+                            activeLogLevel
+                      );
+
+            if (visibleLogs.length === 0) {
+                const empty =
+                    document.createElement("div");
+
+                empty.className =
+                    "logs-empty-state";
+
+                empty.textContent =
+                    logs.length === 0
+                        ? "No persistent logs available."
+                        : "No logs match this filter.";
+
+                deviceLogList.appendChild(empty);
+                return;
+            }
+
+            visibleLogs.forEach((entry) => {
+                const item =
+                    document.createElement("article");
+
+                item.className =
+                    "device-log-entry log-" +
+                    entry.level.toLowerCase();
+
+                const metadata =
+                    document.createElement("div");
+
+                metadata.className =
+                    "device-log-metadata";
+
+                const level =
+                    document.createElement("strong");
+
+                level.textContent = entry.level;
+
+                const time =
+                    document.createElement("span");
+
+                time.textContent =
+                    "Wake " +
+                    entry.wakeCycle +
+                    " · " +
+                    entry.uptimeSeconds +
+                    "s uptime";
+
+                const message =
+                    document.createElement("p");
+
+                message.textContent = entry.message;
+
+                metadata.append(level, time);
+                item.append(metadata, message);
+                deviceLogList.appendChild(item);
+            });
+        }
+
+        async function fetchJson(url) {
+            const response =
+                await fetch(
+                    url,
+                    {
+                        cache: "no-store"
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    url +
+                    " returned " +
+                    response.status
+                );
+            }
+
+            return response.json();
+        }
+
+        async function refreshPage() {
+            const errors = [];
+
+            try {
+                const historyData =
+                    await fetchJson(
+                        "/api/history"
+                    );
+
+                measurements =
+                    Array.isArray(
+                        historyData.measurements
+                    )
+                        ? historyData.measurements
+                        : [];
+
+                updateSummary();
+                renderHistoryTable();
+                drawChart();
+            }
+            catch (error) {
+                errors.push(
+                    "Measurement history unavailable"
+                );
+                console.warn(error);
+            }
+
+            try {
+                const logData =
+                    await fetchJson(
+                        "/api/logs"
+                    );
+
+                logs =
+                    Array.isArray(logData.logs)
+                        ? logData.logs
+                        : [];
+
+                renderLogs();
+            }
+            catch (error) {
+                errors.push(
+                    "Device logs unavailable"
+                );
+                console.warn(error);
+            }
+
+            apiWarning.hidden =
+                errors.length === 0;
+
+            apiWarning.textContent =
+                errors.join(". ");
+        }
+
+        document
+            .querySelectorAll(".log-filter")
+            .forEach((button) => {
+                button.addEventListener(
+                    "click",
+                    () => {
+                        activeLogLevel =
+                            button.dataset.level;
+
+                        document
+                            .querySelectorAll(
+                                ".log-filter"
+                            )
+                            .forEach((filter) => {
+                                filter.classList.toggle(
+                                    "active",
+                                    filter === button
+                                );
+                            });
+
+                        renderLogs();
+                    }
+                );
+            });
+
+        window.addEventListener(
+            "resize",
+            drawChart
+        );
+
+        refreshPage();
+
+        setInterval(
+            refreshPage,
+            10000
+        );
+    })();
+</script>
+
+</body>
+</html>

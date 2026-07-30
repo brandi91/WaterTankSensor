@@ -37,11 +37,16 @@ private:
     static void registerRoutes();
 
     static void handleRoot();
+    static void handleLogs();
     static void handleStatus();
+    static void handleHistoryApi();
+    static void handleLogsApi();
     static void handleSave();
     static void handleMeasure();
     static void handlePublishMqttDiscovery();
     static void handleResetBatteryEstimate();
+    static void handleClearHistory();
+    static void handleClearLogs();
     static void handleSleep();
     static void handleRestart();
     static void handleNotFound();

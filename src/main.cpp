@@ -6,6 +6,7 @@
 #include "config.h"
 #include "led.h"
 #include "logger.h"
+#include "measurement_history.h"
 #include "sensor.h"
 #include "settings.h"
 #include "sleep_manager.h"
@@ -265,6 +266,8 @@ bool performMeasurement(
         "Tank measurement successful"
     );
 
+    MeasurementHistory::addCurrentMeasurement();
+
     BatteryEstimator::addSample(
         Battery::getVoltage(),
         estimatorElapsedSeconds
@@ -489,6 +492,7 @@ void runAutomaticCycle(
 void setup()
 {
     Logger::begin();
+    MeasurementHistory::begin();
     SleepManager::begin();
 
     Logger::info(

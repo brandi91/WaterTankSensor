@@ -226,3 +226,8 @@ bool Sensor::hasMeasurementAttempted()
 {
     return measurementAttempted;
 }
+
+bool Sensor::isSimulated()
+{
+    return true;
+}

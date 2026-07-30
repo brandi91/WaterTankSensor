@@ -55,6 +55,8 @@ void SleepManager::prepareForSleep()
 
     Led::off();
 
+    Logger::flushPersistentLogs();
+
     delay(100);
 }
 

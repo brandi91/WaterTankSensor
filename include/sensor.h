@@ -16,6 +16,7 @@ public:
 
     static bool isValid();
     static bool hasMeasurementAttempted();
+    static bool isSimulated();
 
 private:
     static float readDistance();
