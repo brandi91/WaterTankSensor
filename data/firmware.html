@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>Firmware Update</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="page-shell firmware-page">
+    <header class="site-header">
+        <a class="site-identity" href="/" aria-label="Water Tank Sensor dashboard">
+            <strong>{{DEVICE_NAME}}</strong>
+            <small>ESP32 Tank Monitor</small>
+        </a>
+        <nav class="top-navigation" aria-label="Main navigation">
+            <a class="nav-link" href="/">Dashboard</a>
+            <a class="nav-link" href="/logs">History &amp; Logs</a>
+            <a class="nav-link" href="/info">Device Info</a>
+            {{LOGOUT_CONTROL}}
+        </nav>
+    </header>
+
+    <section class="page-header">
+        <div>
+            <h1>Firmware Update</h1>
+            <p class="page-subtitle">Install a compiled firmware image over the local network.</p>
+        </div>
+        <div class="header-badge">Current {{FW_VERSION}}</div>
+    </section>
+
+    <main class="page-content">
+        <section class="panel firmware-update-panel">
+            <div>
+                <h2>Select firmware</h2>
+                <p class="firmware-description">
+                    Choose the <strong>firmware.bin</strong> built for this ESP32 board.
+                    Settings, history and web files remain unchanged.
+                </p>
+            </div>
+
+            {{FIRMWARE_UPLOAD_ERROR_BLOCK}}
+
+            <form
+                id="firmwareUploadForm"
+                class="firmware-update-form"
+                method="POST"
+                action="/firmware"
+                enctype="multipart/form-data">
+
+                <label for="firmwareFile">Firmware file (.bin)</label>
+                <input
+                    id="firmwareFile"
+                    name="firmware"
+                    type="file"
+                    accept=".bin,application/octet-stream"
+                    required>
+
+                <div class="firmware-warning">
+                    Keep the ESP32 powered and do not close this page during the upload.
+                    The device restarts automatically only after validation succeeds.
+                </div>
+
+                <button
+                    id="firmwareUploadButton"
+                    type="submit"
+                    class="save-settings-button">
+                    Upload and Install Firmware
+                </button>
+
+                <p id="firmwareUploadStatus" class="firmware-upload-status" aria-live="polite"></p>
+            </form>
+        </section>
+    </main>
+</div>
+
+<script>
+    (function () {
+        const form = document.getElementById("firmwareUploadForm");
+        const file = document.getElementById("firmwareFile");
+        const button = document.getElementById("firmwareUploadButton");
+        const status = document.getElementById("firmwareUploadStatus");
+
+        form.addEventListener("submit", function (event) {
+            const selected = file.files[0];
+            if (!selected || !selected.name.toLowerCase().endsWith(".bin")) {
+                event.preventDefault();
+                status.textContent = "Please select a firmware .bin file.";
+                return;
+            }
+
+            if (!window.confirm("Install " + selected.name + " and restart the ESP32?")) {
+                event.preventDefault();
+                return;
+            }
+
+            button.disabled = true;
+            file.readOnly = true;
+            status.textContent = "Uploading firmware. Keep the device powered...";
+        });
+    })();
+</script>
+</body>
+</html>

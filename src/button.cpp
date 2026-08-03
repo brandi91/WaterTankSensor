@@ -45,9 +45,8 @@ void Button::loop()
         millis();
 
     /*
-     * Entprellung:
-     * Jede rohe Zustandsänderung startet den
-     * Entprell-Timer neu.
+     * Debouncing:
+     * Every raw state change restarts the debounce timer.
      */
     if (reading != lastReading)
     {
@@ -64,7 +63,7 @@ void Button::loop()
     }
 
     /*
-     * Der entprellte Zustand hat sich geändert.
+     * The debounced state changed.
      */
     if (reading != lastStableState)
     {
@@ -73,7 +72,7 @@ void Button::loop()
         if (lastStableState == LOW)
         {
             /*
-             * Taste wurde gedrückt.
+             * The button was pressed.
              */
             pressedSince = now;
 
@@ -88,15 +87,15 @@ void Button::loop()
         else
         {
             /*
-             * Taste wurde losgelassen.
+             * The button was released.
              */
             Logger::info(
                 "Button raw: released"
             );
 
             /*
-             * Nur wenn keine der Haltezeiten erreicht
-             * wurde, ist es ein kurzer Tastendruck.
+             * Treat the release as a short press only when no hold threshold
+             * was reached.
              */
             if (factoryResetArmed)
             {
@@ -115,8 +114,7 @@ void Button::loop()
     }
 
     /*
-     * Nach fünf Sekunden:
-     * normalen Webserver starten.
+     * After five seconds, start the normal web server.
      */
     if (
         lastStableState == LOW &&
@@ -136,11 +134,9 @@ void Button::loop()
     }
 
     /*
-     * Nach 15 Sekunden:
-     * Konfigurations-AP starten.
+     * After 15 seconds, start the configuration access point.
      *
-     * Das Ereignis wird ausgelöst, während die
-     * Taste weiterhin gedrückt wird.
+     * Emit the event while the button is still held.
      */
     if (
         lastStableState == LOW &&

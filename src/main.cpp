@@ -24,7 +24,7 @@
 
 /*
  * ============================================================
- * Webserver LED indicator
+ * Web-server LED indicator
  * ============================================================
  */
 
@@ -71,10 +71,9 @@ void updateWebIndicator()
         millis();
 
     /*
-     * LED blinkt nur 15 Sekunden.
+     * Blink the LED for 15 seconds only.
      *
-     * Webserver oder Config-AP laufen danach
-     * trotzdem weiter.
+     * The web server or configuration AP remains active afterward.
      */
     if (
         webIndicatorMode !=
@@ -201,10 +200,9 @@ void startConfigPortalIndicator()
 
 
 /*
- * Wartet begrenzt auf eine WLAN-Verbindung.
+ * Wait for a Wi-Fi connection with a bounded timeout.
  *
- * Der ESP32 bleibt bei einem WLAN-Fehler nicht
- * dauerhaft wach.
+ * A Wi-Fi failure must not keep the ESP32 awake indefinitely.
  */
 bool waitForWifi(
     unsigned long timeoutMs
@@ -241,10 +239,10 @@ bool waitForWifi(
 
 
 /*
- * Lokale Tankmessung durchführen.
+ * Perform a local tank measurement.
  *
  * estimatorElapsedSeconds:
- * Zeit seit dem vorherigen automatischen Messpunkt.
+ * Time since the previous automatic measurement.
  */
 bool performMeasurement(
     uint32_t estimatorElapsedSeconds
@@ -261,8 +259,7 @@ bool performMeasurement(
     );
 
     /*
-     * Batteriewert unmittelbar vor der Messung
-     * aktualisieren.
+     * Refresh the battery value immediately before measuring.
      */
     Battery::loop();
 
@@ -338,8 +335,7 @@ bool performMeasurement(
     );
 
     /*
-     * Im manuellen Webbetrieb kann MQTT bereits
-     * verbunden sein.
+     * MQTT may already be connected in manual web mode.
      */
 #if MQTT_ENABLED
     if (MqttManager::isConnected())
@@ -354,8 +350,7 @@ bool performMeasurement(
     Led::off();
 
     /*
-     * Falls der manuelle Webmodus läuft, beginnt
-     * dessen Blinkanzeige anschließend erneut.
+     * Resume the web-mode indicator after a manual measurement.
      */
     webIndicatorLedState = false;
     lastWebIndicatorToggle = millis();
@@ -365,78 +360,7 @@ bool performMeasurement(
 
 
 /*
- * WLAN und MQTT starten und die aktuelle Messung senden.
- */
-void transmitMeasurement()
-{
-#if MQTT_ENABLED
-    Logger::info(
-        "Starting data transmission"
-    );
-
-    WifiManager::begin();
-    WifiManager::connect();
-
-    if (
-        !waitForWifi(
-            WIFI_CONNECT_TIMEOUT_MS
-        )
-    )
-    {
-        WifiManager::disconnect();
-        return;
-    }
-
-    MqttManager::begin();
-
-    /*
-     * connect() sendet in deinem MQTT-Manager nach
-     * erfolgreicher Verbindung bereits Status und
-     * Messwert.
-     */
-    if (!MqttManager::connect())
-    {
-        Logger::warning(
-            "MQTT transmission failed"
-        );
-    }
-    else
-    {
-        /*
-         * Kurz Zeit für den Netzwerkstack lassen.
-         */
-        const unsigned long mqttStartedAt =
-            millis();
-
-        while (
-            millis() - mqttStartedAt <
-            500UL
-        )
-        {
-            MqttManager::loop();
-            delay(10);
-        }
-
-        Logger::info(
-            "MQTT transmission completed"
-        );
-    }
-
-    MqttManager::disconnect();
-    WifiManager::disconnect();
-
-#else
-
-    Logger::warning(
-        "MQTT is disabled; measurement was not transmitted"
-    );
-
-#endif
-}
-
-
-/*
- * Gerät mit dem gespeicherten Messintervall schlafen legen.
+ * Put the device to sleep for the configured measurement interval.
  */
 void enterNormalDeepSleep()
 {
@@ -444,7 +368,8 @@ void enterNormalDeepSleep()
         !CoreLogic::shouldEnterDeepSleep(
             Settings::data.deepSleepEnabled,
             false,
-            WebServerManager::isConfigPortalActive(),
+            WebServerManager::isConfigPortalActive() ||
+                WebServerManager::isRunning(),
             SleepManager::getRuntimeMode()
         )
     )
@@ -490,14 +415,14 @@ void enterNormalDeepSleep()
 
 
 /*
- * Ein vollständiger automatischer Messzyklus.
+ * Run one complete automatic measurement cycle.
  */
 void runAutomaticCycle(
     uint32_t estimatorElapsedSeconds
 )
 {
     /*
-     * WLAN arbeitet parallel zur Sensormessung.
+     * Establish Wi-Fi before measuring so transmission can follow immediately.
      */
     bool wifiReady = false;
 
@@ -536,8 +461,7 @@ void runAutomaticCycle(
             MqttManager::begin();
 
             /*
-             * MqttManager::connect() veröffentlicht
-             * bereits Status und Messwert.
+             * MqttManager::connect() already publishes status and measurement data.
              */
             if (!MqttManager::connect())
             {
@@ -684,12 +608,12 @@ void setup()
 
     /*
      * ========================================================
-     * Timer-Wakeup
+     * Timer wakeup
      * ========================================================
      *
-     * Messen, senden und sofort wieder schlafen.
+     * Measure, transmit, and immediately return to sleep.
      *
-     * Kein Webserver.
+     * Do not start the web server.
      */
     if (
         wakeupReason ==
@@ -715,10 +639,9 @@ void setup()
      * Normaler Power-on / Reset
      * ========================================================
      *
-     * Ebenfalls ein automatischer Messzyklus.
+     * Power-on also runs an automatic measurement cycle.
      *
-     * Dadurch bleibt das Gerät im Normalbetrieb
-     * nicht unnötig wach und startet keinen Webserver.
+     * This avoids unnecessary awake time and does not start the web server.
      */
     if (
         wakeupReason ==
@@ -727,7 +650,7 @@ void setup()
             WakeupReason::Unknown
     )
     {
-#ifdef DEBUG_LED_TEST
+#if DEBUG_LED_TEST
         Logger::info(
             "Running LED self test..."
         );
@@ -753,13 +676,12 @@ void setup()
 
     /*
      * ========================================================
-     * Button-Wakeup
+     * Button wakeup
      * ========================================================
      *
-     * Das Gerät bleibt zunächst wach, damit die Länge
-     * des Tastendrucks ausgewertet werden kann.
+     * Stay awake initially so the button-press duration can be evaluated.
      *
-     * Der Webserver wird noch nicht automatisch gestartet.
+     * The web server is not started automatically yet.
      */
     Logger::info(
         "Button wakeup: waiting for button action"
@@ -831,9 +753,9 @@ void loop()
     switch (buttonEvent)
     {
         /*
-         * Kurzer Tastendruck:
+         * Short button press:
          *
-         * messen, senden und wieder schlafen.
+         * Measure, transmit, and return to sleep.
          */
         case ButtonEvent::ShortPress:
         {
@@ -881,9 +803,9 @@ void loop()
 
 
         /*
-         * 5 Sekunden:
+         * 5 seconds:
          *
-         * normaler Webserver über das gespeicherte WLAN.
+         * Start the normal web server on the configured Wi-Fi network.
          */
         case ButtonEvent::WebServerPress:
         {
@@ -898,10 +820,14 @@ void loop()
 
             WebServerManager::begin();
 
+            awakeServicesInitialized = true;
+            awakeSchedulingActive = true;
+            lastAutomaticMeasurementAt = millis();
+
             startWebServerIndicator();
 
             Logger::info(
-                "Webserver active - LED blinking blue"
+                "Web server active - LED blinking blue"
             );
 
             break;
@@ -909,9 +835,9 @@ void loop()
 
 
         /*
-         * 15 Sekunden:
+         * 15 seconds:
          *
-         * Konfigurations-AP und Webserver.
+         * Start the configuration access point and web server.
          */
         case ButtonEvent::ConfigPortalPress:
         {
@@ -963,7 +889,7 @@ void loop()
 
 
     /*
-     * Batterieprotokoll nur im manuellen Wachbetrieb.
+     * Awake-mode scheduling and battery sampling use the same interval.
      */
     const unsigned long now =
         millis();
@@ -986,7 +912,10 @@ void loop()
             Settings::data.deepSleepEnabled;
         lastAutomaticMeasurementAt = now;
     }
-    if (!Settings::data.deepSleepEnabled)
+    if (
+        !Settings::data.deepSleepEnabled ||
+        WebServerManager::isRunning()
+    )
     {
         awakeSchedulingActive = true;
     }

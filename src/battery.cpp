@@ -8,21 +8,21 @@
 #include "core_logic.h"
 
 /*
- * Spannungsteiler:
+ * Voltage divider:
  *
- * Akku Plus
+ * Battery positive
  *    |
  *   200 kOhm
  *    |
- *    +---- GPIO34
+ *    +---- GPIO35
  *    |
  *   200 kOhm
  *    |
  *   GND
  *
- * Da beide Widerstände gleich groß sind:
+ * Both resistors have the same value:
  *
- * Akkuspannung = ADC-Spannung * 2
+ * Battery voltage = ADC voltage * 2
  */
 
 namespace
@@ -36,15 +36,18 @@ namespace
 
 void Battery::begin()
 {
+    // GPIO34 has no internal pull-up/down. The charger module must drive
+    // this input LOW when absent and HIGH (3.3 V maximum) when connected.
+    pinMode(CHARGER_DETECT_PIN, INPUT);
+
     pinMode(
         Settings::activePins().batteryAdcPin,
         INPUT
     );
 
     /*
-     * 11 dB erlaubt einen größeren ADC-Messbereich.
-     * Bei maximal 4,2 V Akku liegen durch den
-     * Spannungsteiler ungefähr 2,1 V am GPIO an.
+     * 11 dB attenuation enables a wider ADC input range. A 4.2 V battery
+     * produces approximately 2.1 V at the GPIO through the divider.
      */
     analogSetPinAttenuation(
         Settings::activePins().batteryAdcPin,
@@ -75,8 +78,7 @@ float Battery::readVoltage()
     uint32_t millivoltSum = 0;
 
     /*
-     * Mehrere Messungen mitteln, damit der Wert
-     * weniger springt.
+     * Average multiple samples to reduce measurement noise.
      */
     for (
         uint8_t sample = 0;
@@ -146,20 +148,12 @@ bool Battery::isCritical()
 
 bool Battery::isCharging()
 {
-    /*
-     * Mit der momentanen Schaltung können wir
-     * nur die Spannung messen, nicht zuverlässig
-     * erkennen, ob geladen wird.
-     */
-    return false;
+    return digitalRead(CHARGER_DETECT_PIN) == HIGH;
 }
 
 const char* Battery::getPowerSourceText()
 {
-    /*
-     * The current hardware has no VBUS sense input,
-     * charger status signal or other reliable way to
-     * distinguish USB power from battery power.
-     */
-    return "Unknown";
+    return isCharging()
+        ? "Connected"
+        : "Disconnected";
 }

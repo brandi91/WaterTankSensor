@@ -323,7 +323,7 @@
 
                     <div>
                         <span>Power Source</span>
-                        <strong>{{POWER_SOURCE}}</strong>
+                        <strong id="powerSourceStatus">{{POWER_SOURCE}}</strong>
                     </div>
                 </div>
 
@@ -381,7 +381,7 @@
 
                     <div class="detail-row">
                         <span>Power Source</span>
-                        <strong>{{POWER_SOURCE}}</strong>
+                        <strong id="powerSourceDetail">{{POWER_SOURCE}}</strong>
                     </div>
 
                     <div class="detail-row">
@@ -578,6 +578,18 @@
                         </span>
                     </button>
                 </form>
+
+                <a
+                    href="/firmware"
+                    class="action-button secondary-action">
+
+                    <span class="action-icon">FW</span>
+
+                    <span>
+                        <strong>Firmware Update</strong>
+                        <small>Upload a new firmware .bin file</small>
+                    </span>
+                </a>
 
             </div>
 
@@ -1265,6 +1277,17 @@
                     data.mqttStatus,
                     data.mqttStatusClass
                 );
+
+                const powerSourceStatus =
+                    document.getElementById("powerSourceStatus");
+                const powerSourceDetail =
+                    document.getElementById("powerSourceDetail");
+                if (powerSourceStatus) {
+                    powerSourceStatus.textContent = data.powerSource;
+                }
+                if (powerSourceDetail) {
+                    powerSourceDetail.textContent = data.powerSource;
+                }
 
 
                 /*

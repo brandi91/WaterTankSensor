@@ -9,14 +9,13 @@
 namespace
 {
     /*
-     * Namespace innerhalb der ESP32-Preferences.
+     * Namespace used in ESP32 Preferences.
      */
     constexpr const char* PREFERENCES_NAMESPACE =
         "tank";
 
     /*
-     * Kurze Schlüssel sparen Speicher in der
-     * Preferences-Datenbank.
+     * Short keys reduce Preferences storage overhead.
      */
     constexpr const char* KEY_WIFI_SSID =
         "ssid";
@@ -73,8 +72,7 @@ namespace
         "tank";
 
     /*
-     * Neuer Preferences-Schlüssel für den Abstand
-     * zwischen Sensor und maximalem Wasserstand.
+     * Air gap between the sensor and the maximum water level.
      */
 constexpr const char* KEY_SENSOR_CLEARANCE =
     "clearance";
@@ -107,8 +105,7 @@ constexpr const char* KEY_SENSOR_TRIGGER_PIN = "pinTrigger";
 constexpr const char* KEY_SENSOR_ECHO_PIN = "pinEcho";
 
 /*
- * Gespeicherter Schalter für den schnellen
- * Battery-Estimator-Testmodus.
+ * Persisted switch for the accelerated battery-estimator test mode.
  */
 constexpr const char* KEY_BATTERY_ESTIMATE_TEST_MODE =
     "batteryTest";
@@ -332,7 +329,7 @@ void Settings::load()
     initializeMissingDefaults();
 
     /*
-     * WLAN
+     * Wi-Fi
      */
     data.wifiSSID =
         preferences.getString(
@@ -418,7 +415,7 @@ void Settings::load()
 
 
     /*
-     * Gerät
+     * Device
      */
     data.deviceName =
         preferences.getString(
@@ -428,7 +425,7 @@ void Settings::load()
 
 
     /*
-     * Tankhöhe
+     * Tank height
      */
     data.tankHeight =
         preferences.getFloat(
@@ -444,14 +441,13 @@ void Settings::load()
 
 
     /*
-     * Abstand zwischen Sensor und maximalem
-     * Wasserstand.
+     * Distance between the sensor and the maximum water level.
      */
     data.sensorClearance =
-    preferences.getFloat(
-        KEY_SENSOR_CLEARANCE,
-        DEFAULT_SENSOR_CLEARANCE_CM
-    );
+        preferences.getFloat(
+            KEY_SENSOR_CLEARANCE,
+            DEFAULT_SENSOR_CLEARANCE_CM
+        );
 
     if (data.sensorClearance < 0.0f)
     {
@@ -461,7 +457,7 @@ void Settings::load()
 
 
     /*
-     * Mess- und Deep-Sleep-Intervall
+     * Measurement and deep-sleep interval
      */
     data.measureInterval =
         preferences.getULong(
@@ -596,7 +592,7 @@ if (data.batteryCellCount == 0)
 }
 
 /*
- * Battery Estimate Test Mode laden.
+ * Load battery-estimator test mode.
  */
 data.batteryEstimateTestMode =
     preferences.getBool(
@@ -628,6 +624,15 @@ data.sensorTriggerPin = preferences.isKey(KEY_SENSOR_TRIGGER_PIN)
 data.sensorEchoPin = preferences.isKey(KEY_SENSOR_ECHO_PIN)
     ? preferences.getUChar(KEY_SENSOR_ECHO_PIN)
     : DEFAULT_SENSOR_ECHO_PIN;
+
+// Migrate the former default pairs to the verified JSN-SR04T wiring.
+if ((data.sensorTriggerPin == 5 && data.sensorEchoPin == 18) ||
+    (data.sensorTriggerPin == 22 && data.sensorEchoPin == 23))
+{
+    data.sensorTriggerPin = DEFAULT_SENSOR_TRIGGER_PIN;
+    data.sensorEchoPin = DEFAULT_SENSOR_ECHO_PIN;
+    Logger::info("Migrated ultrasonic pins to trigger GPIO 23 / echo GPIO 22");
+}
 
 String pinError;
 pinsFallback = !validatePins(data, pinError);
@@ -675,7 +680,7 @@ Logger::info(
 void Settings::save()
 {
     /*
-     * WLAN
+     * Wi-Fi
      */
     preferences.putString(
         KEY_WIFI_SSID,
@@ -761,7 +766,7 @@ void Settings::save()
 
 
     /*
-     * Gerät und Tank
+     * Device and tank
      */
     preferences.putString(
         KEY_DEVICE_NAME,
@@ -779,13 +784,13 @@ void Settings::save()
     );
 
     preferences.putULong(
-    KEY_MEASURE_INTERVAL,
-    data.measureInterval
-);
-preferences.putBool(
-    KEY_DEEP_SLEEP_ENABLED,
-    data.deepSleepEnabled
-);
+        KEY_MEASURE_INTERVAL,
+        data.measureInterval
+    );
+    preferences.putBool(
+        KEY_DEEP_SLEEP_ENABLED,
+        data.deepSleepEnabled
+    );
 
 preferences.putBool(KEY_NTP_ENABLED, data.ntpEnabled);
 preferences.putString(KEY_TIME_ZONE, data.timeZone);
@@ -857,10 +862,10 @@ bool Settings::validatePins(
         {4, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32};
     static const uint8_t inputPins[] =
         {4, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32,
-         34, 35, 36, 39};
+         35, 36, 39};
     static const uint8_t pullupPins[] =
         {4, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33};
-    static const uint8_t adc1Pins[] = {32, 34, 35, 36, 39};
+    static const uint8_t adc1Pins[] = {32, 35, 36, 39};
 
     struct PinUse
     {

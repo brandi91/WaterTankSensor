@@ -22,6 +22,9 @@ void Sensor::begin()
     digitalWrite(Settings::activePins().sensorTriggerPin, LOW);
     pinMode(Settings::activePins().sensorEchoPin, INPUT);
 
+    // Allow the JSN-SR04T controller to stabilize after power-up.
+    delay(100);
+
     Logger::info(
         "Sensor Manager initialized on trigger GPIO " +
         String(Settings::activePins().sensorTriggerPin) +
@@ -34,8 +37,7 @@ void Sensor::begin()
 void Sensor::loop()
 {
     /*
-     * Später können hier automatische
-     * Messintervalle verarbeitet werden.
+     * Intentionally empty; main.cpp coordinates measurement scheduling.
      */
 }
 
@@ -104,20 +106,47 @@ bool Sensor::measure()
 
 float Sensor::readDistance()
 {
-    /*
-     * Simulation, bis der echte Ultraschallsensor
-     * angeschlossen ist.
-     *
-     * Beispiel:
-     *
-     * Tankhöhe:         100 cm
-     * Sensor Clearance:  12 cm
-     * Abstand:            54 cm
-     *
-     * Wasserhöhe:
-     * 100 + 12 - 54 = 58 cm
-     */
-    return 54.0f;
+    // JSN-SR04T trigger pulse followed by one bounded echo measurement.
+    constexpr unsigned long ECHO_TIMEOUT_US = 40000UL;
+    constexpr float SOUND_SPEED_CM_PER_US = 0.0343f;
+    constexpr float MAX_DISTANCE_CM = 600.0f;
+
+    const uint8_t triggerPin = Settings::activePins().sensorTriggerPin;
+    const uint8_t echoPin = Settings::activePins().sensorEchoPin;
+
+    digitalWrite(triggerPin, LOW);
+    delayMicroseconds(3);
+    digitalWrite(triggerPin, HIGH);
+    delayMicroseconds(20);
+    digitalWrite(triggerPin, LOW);
+
+    const unsigned long echoDuration =
+        pulseIn(echoPin, HIGH, ECHO_TIMEOUT_US);
+    if (echoDuration == 0)
+    {
+        Logger::warning("Ultrasonic echo timeout");
+        return -1.0f;
+    }
+
+    const float measuredDistance =
+        static_cast<float>(echoDuration) *
+        SOUND_SPEED_CM_PER_US /
+        2.0f;
+    if (
+        !isfinite(measuredDistance) ||
+        measuredDistance <= 0.0f ||
+        measuredDistance > MAX_DISTANCE_CM
+    )
+    {
+        Logger::warning(
+            "Ultrasonic distance out of range: " +
+            String(measuredDistance, 1) +
+            " cm"
+        );
+        return -1.0f;
+    }
+
+    return measuredDistance;
 }
 
 
@@ -151,5 +180,5 @@ bool Sensor::hasMeasurementAttempted()
 
 bool Sensor::isSimulated()
 {
-    return true;
+    return false;
 }

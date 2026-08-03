@@ -7,24 +7,23 @@
  * Battery Estimator
  * ============================================================
  *
- * Lernt aus mehreren Batteriespannungs-Messungen,
- * wie schnell die Spannung abfällt.
+ * Learns the voltage decline rate from multiple battery samples.
  *
- * Daraus wird eine grobe verbleibende Laufzeit geschätzt.
+ * Uses that rate to estimate the remaining runtime.
  */
 class BatteryEstimator
 {
 public:
     /*
-     * Gespeicherte Lernwerte laden.
+     * Load persisted learning data.
      */
     static void begin();
 
     /*
-     * Neue Batteriespannung hinzufügen.
+     * Add a battery-voltage sample.
      *
      * elapsedSeconds:
-     * Zeit seit dem letzten gespeicherten Messpunkt.
+     * Time since the previous persisted sample.
      */
     static void addSample(
         float voltage,
@@ -32,44 +31,41 @@ public:
     );
 
     /*
-     * Alle erlernten Batteriewerte löschen.
+     * Clear all learned battery data.
      *
-     * WLAN-, MQTT- und Tankeinstellungen
-     * bleiben dabei erhalten.
+     * Wi-Fi, MQTT, and tank settings remain unchanged.
      */
     static void reset();
 
     /*
-     * true, sobald genug Messpunkte und genügend
-     * Lernzeit vorhanden sind.
+     * True when enough samples and learning time are available.
      */
     static bool isReady();
 
     /*
-     * true, solange noch gelernt wird.
+     * True while the estimator is still learning.
      */
     static bool isLearning();
 
     /*
-     * Aktuelle Anzahl gespeicherter Messpunkte.
+     * Current number of stored samples.
      */
     static uint32_t getSampleCount();
 
     /*
-     * Gesamte Lernzeit in Sekunden.
+     * Total learning time in seconds.
      */
     static uint32_t getLearningSeconds();
 
     /*
-     * Geschätzte Restlaufzeit in Tagen.
+     * Estimated remaining runtime in days.
      *
-     * Gibt -1 zurück, wenn noch keine sinnvolle
-     * Schätzung möglich ist.
+     * Returns -1 when no meaningful estimate is available yet.
      */
     static float getEstimatedDays();
 
     /*
-     * Fertiger Text für das Webinterface:
+     * Ready-to-display text for the web interface:
      *
      * Learning...
      * Learning... ~8.2 days

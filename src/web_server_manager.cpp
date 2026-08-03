@@ -2,6 +2,7 @@
 
 #include <WiFi.h>
 #include <LittleFS.h>
+#include <Update.h>
 #include <math.h>
 #include <esp_system.h>
 
@@ -174,14 +175,16 @@ bool WebServerManager::sleepPending = false;
 unsigned long WebServerManager::sleepAt = 0;
 
 /*
- * Zeitpunkt des letzten Batterielernpunkts,
- * der über die Weboberfläche ausgelöst wurde.
+ * Timestamp of the latest battery-learning sample initiated from the web UI.
  */
 unsigned long
     WebServerManager::lastBatteryEstimatorSampleAt = 0;
 bool WebServerManager::sessionActive = false;
 String WebServerManager::sessionToken;
 unsigned long WebServerManager::sessionLastActiveAt = 0;
+bool WebServerManager::firmwareUploadAuthorized = false;
+bool WebServerManager::firmwareUploadSuccessful = false;
+String WebServerManager::firmwareUploadError;
 
 void WebServerManager::begin()
 {
@@ -220,7 +223,7 @@ void WebServerManager::begin()
     server.begin();
     running = true;
 
-    Logger::info("Webserver started");
+    Logger::info("Web server started");
 
     if (WiFi.status() == WL_CONNECTED)
     {
@@ -367,7 +370,7 @@ void WebServerManager::stop()
         running = false;
 
         Logger::info(
-            "Webserver stopped"
+            "Web server stopped"
         );
     }
 
@@ -514,6 +517,19 @@ server.on(
         "/restart",
         HTTP_POST,
         handleRestart
+    );
+
+    server.on(
+        "/firmware",
+        HTTP_GET,
+        handleFirmwarePage
+    );
+
+    server.on(
+        "/firmware",
+        HTTP_POST,
+        handleFirmwareUploadComplete,
+        handleFirmwareUpload
     );
 
     server.on(
@@ -1485,9 +1501,8 @@ void WebServerManager::handleSave()
 
 
     /*
-     * Sensor Clearance:
-     * Luftspalt zwischen Sensor und maximalem
-     * Wasserstand.
+     * Sensor clearance is the air gap between the sensor and the maximum
+     * water level.
      */
     if (server.hasArg("sensorClearance"))
     {
@@ -1712,8 +1727,7 @@ void WebServerManager::handleSave()
     }
 
 /*
- * Ein nicht gesetztes Checkbox-Feld wird vom
- * Browser überhaupt nicht übertragen.
+ * Browsers omit unchecked checkbox fields from form submissions.
  */
 Settings::data.batteryEstimateTestMode =
     server.hasArg(
@@ -1894,8 +1908,7 @@ void WebServerManager::handleMeasure()
     if (measurementSuccessful)
     {
         /*
-         * Vergangene Zeit seit dem letzten
-         * Web-Messpunkt bestimmen.
+         * Determine elapsed time since the previous web-initiated sample.
          */
         const unsigned long now =
             millis();
@@ -2004,9 +2017,8 @@ void WebServerManager::handleResetBatteryEstimate()
     BatteryEstimator::reset();
 
     /*
-     * Auch den lokalen Web-Zeitpunkt zurücksetzen,
-     * damit die nächste Messung eine neue Lernphase
-     * beginnt.
+     * Reset the local timestamp so the next sample starts a new learning
+     * phase.
      */
     lastBatteryEstimatorSampleAt = 0;
 
@@ -2247,6 +2259,128 @@ void WebServerManager::handleRestart()
     restartAt = millis() + 3000UL;
 }
 
+void WebServerManager::handleFirmwarePage()
+{
+    if (!requireAuthentication())
+    {
+        return;
+    }
+
+    firmwareUploadError = "";
+    sendTemplate("/firmware.html");
+}
+
+void WebServerManager::handleFirmwareUpload()
+{
+    HTTPUpload& upload = server.upload();
+
+    if (upload.status == UPLOAD_FILE_START)
+    {
+        firmwareUploadAuthorized =
+            !Settings::data.webLoginEnabled ||
+            configPortalActive ||
+            hasValidSession();
+        firmwareUploadSuccessful = false;
+        firmwareUploadError = "";
+
+        if (!firmwareUploadAuthorized)
+        {
+            return;
+        }
+
+        String filename = upload.filename;
+        filename.toLowerCase();
+        if (filename.isEmpty() || !filename.endsWith(".bin"))
+        {
+            firmwareUploadError =
+                "Please select a valid firmware .bin file.";
+            return;
+        }
+
+        Logger::warning(
+            "Firmware upload started: " + upload.filename
+        );
+
+        if (!Update.begin(UPDATE_SIZE_UNKNOWN, U_FLASH))
+        {
+            firmwareUploadError =
+                "Firmware update could not start: " +
+                String(Update.errorString());
+        }
+        return;
+    }
+
+    if (!firmwareUploadAuthorized || !firmwareUploadError.isEmpty())
+    {
+        return;
+    }
+
+    if (upload.status == UPLOAD_FILE_WRITE)
+    {
+        if (Update.write(upload.buf, upload.currentSize) != upload.currentSize)
+        {
+            firmwareUploadError =
+                "Firmware write failed: " +
+                String(Update.errorString());
+            Update.abort();
+        }
+        return;
+    }
+
+    if (upload.status == UPLOAD_FILE_END)
+    {
+        if (!Update.end(true))
+        {
+            firmwareUploadError =
+                "Firmware validation failed: " +
+                String(Update.errorString());
+            return;
+        }
+
+        firmwareUploadSuccessful = true;
+        Logger::warning(
+            "Firmware upload completed successfully (" +
+            String(upload.totalSize) +
+            " bytes)"
+        );
+        return;
+    }
+
+    if (upload.status == UPLOAD_FILE_ABORTED)
+    {
+        Update.abort();
+        firmwareUploadError = "Firmware upload was cancelled.";
+        Logger::warning("Firmware upload aborted");
+    }
+}
+
+void WebServerManager::handleFirmwareUploadComplete()
+{
+    if (!firmwareUploadAuthorized)
+    {
+        requireAuthentication();
+        return;
+    }
+
+    if (!firmwareUploadSuccessful)
+    {
+        if (firmwareUploadError.isEmpty())
+        {
+            firmwareUploadError = "No firmware data was received.";
+        }
+
+        Logger::error(
+            "Firmware upload failed: " + firmwareUploadError
+        );
+        sendTemplate("/firmware.html");
+        return;
+    }
+
+    sendTemplate("/firmware-success.html");
+    restartPending = true;
+    restartAt = millis() + 4000UL;
+}
+
 void WebServerManager::handleNotFound()
 {
     if (!requireAuthentication())
@@ -2441,6 +2575,15 @@ void WebServerManager::processTemplate(
     page.replace(
         "{{FW_VERSION}}",
         FW_VERSION
+    );
+
+    page.replace(
+        "{{FIRMWARE_UPLOAD_ERROR_BLOCK}}",
+        firmwareUploadError.isEmpty()
+            ? ""
+            : "<div class=\"firmware-error\" role=\"alert\">" +
+                htmlEscape(firmwareUploadError) +
+                "</div>"
     );
 
     page.replace(

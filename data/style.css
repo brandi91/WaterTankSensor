@@ -1,6 +1,6 @@
 /*
  * ============================================================
- * Water Tank Sensor – Dark Dashboard
+ * Water Tank Sensor - dark dashboard
  * ============================================================
  */
 
@@ -898,6 +898,73 @@ select {
 
 .danger-action:hover {
     background: rgba(255, 82, 82, 0.08);
+}
+
+.firmware-update-panel {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 28px;
+}
+
+.firmware-description {
+    color: var(--text-soft);
+    line-height: 1.6;
+}
+
+.firmware-update-form {
+    display: grid;
+    gap: 16px;
+    margin-top: 24px;
+}
+
+.firmware-update-form label {
+    font-weight: 700;
+}
+
+.firmware-update-form input[type="file"] {
+    width: 100%;
+    padding: 16px;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-small);
+    background: var(--background-soft);
+    color: var(--text);
+}
+
+.firmware-warning,
+.firmware-error {
+    padding: 14px 16px;
+    border-radius: var(--radius-small);
+    line-height: 1.5;
+}
+
+.firmware-warning {
+    border: 1px solid rgba(255, 173, 74, 0.5);
+    background: rgba(255, 173, 74, 0.09);
+    color: #ffd59c;
+}
+
+.firmware-error {
+    margin-top: 20px;
+    border: 1px solid rgba(255, 82, 82, 0.7);
+    background: rgba(255, 82, 82, 0.1);
+    color: #ffb2b2;
+}
+
+.firmware-upload-status {
+    min-height: 1.5em;
+    margin: 0;
+    color: var(--text-soft);
+}
+
+.firmware-success-panel {
+    margin-top: 12vh;
+    text-align: center;
+}
+
+.firmware-success-icon {
+    color: var(--green);
+    font-size: 64px;
+    font-weight: 800;
 }
 
 

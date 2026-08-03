@@ -50,7 +50,7 @@ private:
 
 
     /*
-     * Beispielsweise:
+     * Example:
      *
      * WaterTankSensor-a1b2c3d4
      */
@@ -58,16 +58,15 @@ private:
 
 
     /*
-     * Eindeutige ID aus der ESP32-Chip-ID.
+     * Stable identifier derived from the ESP32 chip ID.
      *
-     * Diese ID bleibt auch gleich, wenn der
-     * Gerätename später geändert wird.
+     * This ID remains unchanged when the device name changes.
      */
     static String buildHardwareId();
 
 
     /*
-     * Beispielsweise:
+     * Example:
      *
      * watertank/watertanksensor/state
      */
@@ -77,7 +76,7 @@ private:
 
 
     /*
-     * Sonderzeichen für JSON absichern.
+     * Escape special characters for JSON.
      */
     static String jsonEscape(
         const String& value

@@ -5,14 +5,14 @@
 
 /*
  * ============================================================
- * Gespeicherte Geräteeinstellungen
+ * Persisted device settings
  * ============================================================
  */
 
 struct SettingsData
 {
     /*
-     * WLAN
+     * Wi-Fi
      */
     String wifiSSID;
     String wifiPassword;
@@ -47,22 +47,22 @@ struct SettingsData
     bool mqttEnabled = false;
 
     /*
-     * Gerät
+     * Device
      */
     String deviceName;
 
     /*
-     * Nutzbare Tankhöhe.
+     * Usable tank height.
      */
     float tankHeight = 100.0f;
 
     /*
-     * Abstand zwischen Sensor und maximalem Wasserstand.
+     * Distance between the sensor and the maximum water level.
      */
     float sensorClearance = 12.0f;
 
     /*
-     * Mess- und Deep-Sleep-Intervall in Sekunden.
+     * Measurement and deep-sleep interval in seconds.
      */
     uint32_t measureInterval = 300;
     bool deepSleepEnabled = true;
@@ -84,10 +84,10 @@ struct SettingsData
      * Battery Estimate Test Mode:
      *
      * true:
-     * 5 Messpunkte und mindestens 2 Minuten.
+     * 5 samples and at least 2 minutes.
      *
      * false:
-     * 30 Messpunkte und mindestens 24 Stunden.
+     * 30 samples and at least 24 hours.
      */
     bool batteryEstimateTestMode = false;
 

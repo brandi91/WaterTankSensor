@@ -10,17 +10,16 @@
 namespace
 {
     /*
-     * Eigener Preferences-Bereich.
+     * Dedicated Preferences namespace.
      *
-     * Dadurch löscht der Reset nur die Batterielernwerte
-     * und nicht die allgemeinen Geräteeinstellungen.
+     * Resetting this namespace leaves general device settings untouched.
      */
     constexpr const char* PREFERENCES_NAMESPACE =
         "batteryEst";
 
 
     /*
-     * Preferences-Schlüssel
+     * Preferences keys
      */
     constexpr const char* KEY_SAMPLE_COUNT =
         "samples";
@@ -36,30 +35,25 @@ namespace
 
 
     /*
-     * Unterhalb dieser Spannung betrachten wir
-     * den Akku für die Schätzung als leer.
-     */
-    /*
-     * Steigt die Spannung plötzlich um mindestens
-     * 0,15 V, gehen wir von Laden oder Akkuwechsel aus.
+     * A sudden rise of at least 0.15 V indicates charging or battery
+     * replacement.
      */
     constexpr float BATTERY_REPLACEMENT_RISE_VOLTAGE =
         0.15f;
 
 
     /*
-     * Eine kleinere Spannungsänderung wäre zu stark
-     * durch Messrauschen beeinflusst.
+     * A smaller threshold would be too sensitive to measurement noise.
      */
     constexpr float MINIMUM_USEFUL_VOLTAGE_DROP =
         0.01f;
 
 
     /*
-     * Testmodus:
+     * Test mode:
      *
-     * - mindestens 5 Messpunkte
-     * - mindestens 2 Minuten Lernzeit
+     * - at least 5 samples
+     * - at least 2 minutes of learning time
      */
     constexpr uint32_t TEST_MINIMUM_SAMPLES =
         5UL;
@@ -71,8 +65,8 @@ namespace
     /*
      * Normalbetrieb:
      *
-     * - mindestens 30 Messpunkte
-     * - mindestens 24 Stunden Lernzeit
+     * - at least 30 samples
+     * - at least 24 hours of learning time
      */
     constexpr uint32_t NORMAL_MINIMUM_SAMPLES =
         30UL;
@@ -233,7 +227,7 @@ void BatteryEstimator::addSample(
     }
 
     /*
-     * Ungültige Werte nicht übernehmen.
+     * Reject invalid values.
      */
     if (
         !isfinite(voltage) ||
@@ -250,7 +244,7 @@ void BatteryEstimator::addSample(
     }
 
     /*
-     * Erster Messpunkt beginnt eine neue Lernphase.
+     * The first sample starts a new learning phase.
      */
     if (
         sampleCount == 0 ||
@@ -278,7 +272,7 @@ void BatteryEstimator::addSample(
     }
 
     /*
-     * Automatischer Reset nach Laden oder Akkuwechsel.
+     * Reset automatically after charging or battery replacement.
      */
     if (
         voltage >=
@@ -297,8 +291,7 @@ void BatteryEstimator::addSample(
         reset();
 
         /*
-         * Aktuelle Spannung direkt als ersten
-         * Messpunkt der neuen Lernphase übernehmen.
+         * Keep the current voltage as the first sample of the new phase.
          */
         sampleCount = 1;
         startVoltage = voltage;
@@ -358,7 +351,7 @@ void BatteryEstimator::updateEstimate(
         currentVoltage;
 
     /*
-     * Noch kein ausreichend großer Spannungsabfall.
+     * The voltage drop is not large enough yet.
      */
     if (
         voltageDrop <
@@ -476,7 +469,7 @@ float BatteryEstimator::getEstimatedDays()
 String BatteryEstimator::getDisplayText()
 {
     /*
-     * Noch kein berechenbarer Spannungsabfall.
+     * No measurable voltage drop is available yet.
      */
     if (estimatedDays < 0.0f)
     {
@@ -489,8 +482,7 @@ String BatteryEstimator::getDisplayText()
         " days";
 
     /*
-     * Es gibt bereits eine grobe Berechnung,
-     * aber noch nicht genug Messpunkte oder Lernzeit.
+     * A rough estimate exists, but more samples or learning time are required.
      */
     if (!ready)
     {

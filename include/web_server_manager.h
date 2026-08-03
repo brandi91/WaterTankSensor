@@ -30,13 +30,15 @@ private:
     static unsigned long sleepAt;
 
     /*
-     * Wird für Batterielernpunkte verwendet,
-     * die über den Web-Messbutton entstehen.
+     * Tracks battery-learning samples initiated from the web interface.
      */
     static unsigned long lastBatteryEstimatorSampleAt;
     static bool sessionActive;
     static String sessionToken;
     static unsigned long sessionLastActiveAt;
+    static bool firmwareUploadAuthorized;
+    static bool firmwareUploadSuccessful;
+    static String firmwareUploadError;
 
     static void registerRoutes();
 
@@ -59,6 +61,9 @@ private:
     static void handleClearLogs();
     static void handleSleep();
     static void handleRestart();
+    static void handleFirmwarePage();
+    static void handleFirmwareUpload();
+    static void handleFirmwareUploadComplete();
     static void handleNotFound();
     static bool requireAuthentication(bool apiRequest = false);
     static bool hasValidSession(bool refreshActivity = true);

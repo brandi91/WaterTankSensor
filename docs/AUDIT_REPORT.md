@@ -1,6 +1,6 @@
 # WaterTankSensor audit report
 
-Audit baseline: branch `test`, commit `7dd1321a758fc39ded086386991eaadf987e7c38`.
+Audit updated for the 0.11 firmware working tree.
 
 ## Persistence inventory
 
@@ -39,8 +39,9 @@ probe routes. `/`, `/info`, `/logs`, `/status`, `/api/history`, and `/api/logs`
 pass through the central authentication check. All state-changing routes use
 POST and check authentication before changing state: `/save`, `/save-pins`,
 `/restore-default-pins`, `/measure`, `/reset-battery-estimate`,
-`/mqtt-discovery`, `/clear-history`, `/clear-logs`, `/sleep`, `/restart`, and
-`/logout`.
+`/mqtt-discovery`, `/clear-history`, `/clear-logs`, `/sleep`, `/restart`,
+`/firmware`, and `/logout`. The firmware page and multipart upload both use the
+same central authentication/session policy.
 
 Protected browser pages redirect to `/login`; APIs return JSON 401 and protected
 actions return 401 text. Sessions use an opaque random token, `HttpOnly`, and
@@ -80,14 +81,14 @@ the suite was added but not reported as passed.
 - Removed the rendered factory AP password; secret fields remain write-only.
 - Tank and battery percentage logic is now shared, finite-input checked, clamped,
   and host-testable without changing nominal results.
-- The current sensor driver deliberately returns a simulated 54 cm reading; real
-  ultrasonic acquisition is not implemented in this revision.
+- The sensor driver performs real JSN-SR04T pulse/echo acquisition with a
+  bounded timeout and range validation.
 - Battery cell count is persisted/displayed but is not applied to the voltage
   thresholds or ADC conversion. The present divider/calibration assumptions
   appear suitable for a single-cell range; multi-cell hardware interpretation
   must be specified before changing behavior.
 - File replacement for history/log persistence is bounded and checked, but
   power-loss fault injection was not performed.
-- No firmware or filesystem was uploaded during this audit.
-- No visual design, settings ordering, button thresholds, pin defaults, routes,
-  MQTT topics, recovery behavior, or deep-sleep behavior was changed.
+- Firmware OTA uses the inactive application partition and reports validation
+  failures without scheduling a restart. Hardware OTA fault injection remains a
+  manual test.

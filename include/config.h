@@ -2,24 +2,27 @@
 
 /*
  * ============================================================
- * WaterTankSensor – zentrale Konfiguration
+ * WaterTankSensor - central configuration
  * ============================================================
  */
 
 
 /*
  * ============================================================
- * Ultraschallsensor
+ * Ultrasonic sensor
  * ============================================================
  */
 
-#define DEFAULT_SENSOR_TRIGGER_PIN 5
-#define DEFAULT_SENSOR_ECHO_PIN 18
+#define DEFAULT_SENSOR_TRIGGER_PIN 23
+#define DEFAULT_SENSOR_ECHO_PIN 22
+
+// Fixed 3.3 V charger/module-present signal. HIGH means connected.
+#define CHARGER_DETECT_PIN 34
 
 
 /*
  * ============================================================
- * Status-LED
+ * Status LED
  * ============================================================
  */
 
@@ -28,29 +31,29 @@
 
 /*
  * ============================================================
- * RGB-LED
+ * RGB LED
  * ============================================================
  *
- * true  = gemeinsame Kathode
- * false = gemeinsame Anode
+ * true  = common cathode
+ * false = common anode
  */
 
-#define DEFAULT_LED_RED_PIN 25
+#define DEFAULT_LED_RED_PIN 27
 #define DEFAULT_LED_GREEN_PIN 26
-#define DEFAULT_LED_BLUE_PIN 27
+#define DEFAULT_LED_BLUE_PIN 25
 
 #define RGB_COMMON_CATHODE true
 
 
 /*
  * ============================================================
- * Taster
+ * Button
  * ============================================================
  *
- * Der Taster befindet sich zwischen GPIO 33 und GND.
+ * The button connects GPIO 33 to GND.
  *
- * Nicht gedrückt = HIGH
- * Gedrückt       = LOW
+ * Released = HIGH
+ * Pressed  = LOW
  */
 
 #define DEFAULT_BUTTON_PIN 33
@@ -59,20 +62,18 @@
  * This fixed pin is deliberately not configurable. It remains the
  * deep-sleep wake/recovery input even when the normal button is moved.
  */
-#define RECOVERY_BUTTON_PIN DEFAULT_BUTTON_PIN
+#define RECOVERY_BUTTON_PIN 33
 
-// Entprellzeit des Tasters
+// Button debounce time.
 #define BUTTON_DEBOUNCE_MS 50UL
 
 /*
- * Nach 5 Sekunden:
- * Webserver über das normale WLAN starten.
+ * After 5 seconds, start the web server on the configured Wi-Fi network.
  */
 #define BUTTON_WEB_SERVER_PRESS_MS 5000UL
 
 /*
- * Nach insgesamt 15 Sekunden:
- * Konfigurations-AP und Webserver starten.
+ * After 15 seconds, start the configuration access point and web server.
  */
 #define BUTTON_CONFIG_PORTAL_PRESS_MS 15000UL
 
@@ -82,24 +83,24 @@
 
 /*
  * ============================================================
- * Webserver-Anzeige über RGB-LED
+ * Web-server indicator on the RGB LED
  * ============================================================
  */
 
-// Abstand zwischen LED ein und LED aus
+// Interval between LED state changes.
 #define WEB_LED_BLINK_INTERVAL_MS 500UL
 
-// Gesamtdauer des Blinkens: 15 Sekunden
+// Total indicator duration: 15 seconds.
 #define WEB_LED_INDICATOR_DURATION_MS 15000UL
 
 
 /*
  * ============================================================
- * Batteriespannungsmessung
+ * Battery-voltage measurement
  * ============================================================
  */
 
-#define DEFAULT_BATTERY_ADC_PIN 34
+#define DEFAULT_BATTERY_ADC_PIN 35
 
 
 /*
@@ -109,19 +110,18 @@
  */
 
 /*
- * Standard-Tankhöhe in Zentimetern.
+ * Default usable tank height in centimeters.
  */
 #define DEFAULT_TANK_HEIGHT_CM 100.0f
 
 /*
- * Abstand zwischen Sensor und maximalem Wasserstand.
+ * Distance between the sensor and the maximum water level.
  *
- * Der Sensor befindet sich bei vollem Tank weiterhin
- * diesen Abstand oberhalb der Wasseroberfläche.
+ * This air gap remains when the tank is full.
  */
 #define DEFAULT_SENSOR_CLEARANCE_CM 12.0f
 /*
- * Standard-Messintervall in Sekunden.
+ * Default measurement interval in seconds.
  */
 #define DEFAULT_MEASURE_INTERVAL 300UL
 
@@ -131,28 +131,28 @@
 
 /*
  * ============================================================
- * WLAN
+ * Wi-Fi
  * ============================================================
  */
 
 #define DEFAULT_HOSTNAME "WaterTankSensor"
 
-// Maximale Wartezeit beim Verbinden
+// Maximum connection wait time.
 #define WIFI_CONNECT_TIMEOUT_MS 15000UL
 
-// Abstand zwischen erneuten Verbindungsversuchen
+// Interval between connection attempts.
 #define WIFI_RECONNECT_INTERVAL_MS 10000UL
 
 
 /*
  * ============================================================
- * LED-Selbsttest
+ * LED self-test
  * ============================================================
  *
- * Zum Deaktivieren diese Zeile auskommentieren.
+ * Enable only for hardware diagnostics. Normal release builds keep it off.
  */
 
-#define DEBUG_LED_TEST
+#define DEBUG_LED_TEST false
 
 
 /*
@@ -161,10 +161,10 @@
  * ============================================================
  *
  * true:
- * Deep Sleep wird nur simuliert.
+ * Deep sleep is simulated.
  *
  * false:
- * ESP32 geht wirklich in Deep Sleep.
+ * The ESP32 enters real deep sleep.
  */
 
 #define DEBUG_DISABLE_DEEP_SLEEP false
@@ -176,8 +176,7 @@
 #define DEEP_SLEEP_AUDIT_DIAGNOSTICS false
 
 /*
- * Der Taster verbindet GPIO 33 beim Drücken mit GND.
- * Deshalb wird bei LOW aufgeweckt.
+ * The button connects GPIO 33 to GND, so LOW is the wake level.
  */
 
 #define BUTTON_WAKEUP_LEVEL 0
@@ -185,7 +184,7 @@
 
 /*
  * ============================================================
- * Konfigurations-Access-Point
+ * Configuration access point
  * ============================================================
  */
 
@@ -198,7 +197,7 @@
 
 /*
  * ============================================================
- * Webserver
+ * Web server
  * ============================================================
  */
 
@@ -211,11 +210,11 @@
  * ============================================================
  */
 
-// MQTT-Funktionen global ein- oder ausschalten
+// Enable or disable MQTT support globally.
 #define MQTT_ENABLED true
 
-// Abstand zwischen Verbindungsversuchen
+// Interval between connection attempts.
 #define MQTT_RECONNECT_INTERVAL_MS 10000UL
 
-// Abstand zwischen regelmäßigen MQTT-Veröffentlichungen
+// Interval between periodic MQTT publications while awake.
 #define MQTT_PUBLISH_INTERVAL_MS 30000UL

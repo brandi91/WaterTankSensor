@@ -22,8 +22,8 @@ namespace
 
 
     /*
-     * Die Home-Assistant-Discovery-Nachricht ist
-     * größer als das Standardlimit von PubSubClient.
+     * The Home Assistant discovery payload exceeds PubSubClient's default
+     * packet-size limit.
      */
     constexpr uint16_t MQTT_BUFFER_SIZE =
         4096;
@@ -45,7 +45,7 @@ String MqttManager::discoveryStatus =
 
 /*
  * ============================================================
- * Initialisierung
+ * Initialization
  * ============================================================
  */
 
@@ -150,7 +150,7 @@ void MqttManager::loop()
 
 /*
  * ============================================================
- * Verbindung
+ * Connection
  * ============================================================
  */
 
@@ -228,8 +228,7 @@ bool MqttManager::connect()
     /*
      * Last Will:
      *
-     * Wenn die Verbindung unerwartet abbricht,
-     * veröffentlicht der Broker "offline".
+     * The broker publishes "offline" when the connection ends unexpectedly.
      */
     if (Settings::data.mqttUser.isEmpty())
     {
@@ -280,13 +279,12 @@ bool MqttManager::connect()
 
 
     /*
-     * Discovery zuerst senden.
+     * Publish discovery first.
      *
-     * Danach kennt Home Assistant die Sensoren,
-     * bevor der erste Messwert veröffentlicht wird.
+     * This lets Home Assistant register the sensors before the first state.
      */
     /*
-     * Gerät als erreichbar kennzeichnen.
+     * Mark the device as available.
      */
     mqttClient.publish(
         availabilityTopic.c_str(),
@@ -294,7 +292,7 @@ bool MqttManager::connect()
         true
     );
 
-
+    publishDiscovery();
     publishStatus();
     publishMeasurement();
 
@@ -307,15 +305,13 @@ void MqttManager::disconnect()
     if (mqttClient.connected())
     {
         /*
-         * Absichtlich KEIN "offline" veröffentlichen.
+         * Deliberately do not publish "offline" here.
          *
-         * Das Gerät geht nach jeder Messung in Deep Sleep.
-         * Würden wir hier offline senden, wären die Sensoren
-         * in Home Assistant fast ständig nicht verfügbar.
+         * The device enters deep sleep after each measurement. Publishing
+         * offline here would leave the Home Assistant sensors unavailable
+         * most of the time.
          *
-         * mqttClient.disconnect() beendet die Verbindung
-         * kontrolliert, sodass auch das Last Will nicht
-         * ausgelöst wird.
+         * A clean disconnect also prevents the Last Will from firing.
          */
         mqttClient.disconnect();
     }
@@ -370,25 +366,16 @@ const String availabilityTopic =
 
 
     /*
-     * Ein Sensor gilt als veraltet, wenn mehrere
-     * geplante Messzyklen ausbleiben.
-     *
-     * Beispiel bei 60 Sekunden:
-     *
-     * 3 × 60 + 60 = 240 Sekunden.
+     * Measurement interval plus 10 percent tolerance, rounded up to a whole
+     * second. Example: 300 + 30 = 330 seconds.
      */
-    uint32_t expireAfter =
+    const uint32_t measureInterval =
         static_cast<uint32_t>(
             Settings::data.measureInterval
-        ) *
-        3UL +
-        60UL;
-
-    if (expireAfter < 180UL)
-    {
-        expireAfter =
-            180UL;
-    }
+        );
+    const uint32_t expireAfter =
+        measureInterval +
+        (measureInterval + 9UL) / 10UL;
 
 
     String payload;
@@ -402,7 +389,7 @@ const String availabilityTopic =
 
 
     /*
-     * Geräteinformationen
+     * Device information
      */
     payload += "\"device\":{";
 
@@ -433,10 +420,9 @@ const String availabilityTopic =
 
 
     /*
-     * Ursprung der Discovery-Nachricht.
+     * Discovery-message origin.
      *
-     * Bei Home-Assistant-Device-Discovery ist
-     * dieser Bereich erforderlich.
+     * Home Assistant device discovery requires this section.
      */
     payload += "\"origin\":{";
 
@@ -451,10 +437,9 @@ const String availabilityTopic =
 
 
 /*
- * Gemeinsames Availability-Topic.
+ * Shared availability topic.
  *
- * Bei Device Discovery verwenden wir hier
- * das vollständige Topic und keinen ~-Alias.
+ * Device discovery uses the complete topic instead of a ~ alias.
  */
 payload += "\"availability_topic\":\"";
 payload += availabilityTopic;
@@ -465,14 +450,14 @@ payload += "\",";
 
 
     /*
-     * Sensor-Komponenten
+     * Sensor components
      */
     payload += "\"components\":{";
 
 
     /*
      * --------------------------------------------------------
-     * Füllstand
+     * Fill level
      * --------------------------------------------------------
      */
     payload += "\"fill_percent\":{";
@@ -503,7 +488,7 @@ payload += "\",";
 
     /*
      * --------------------------------------------------------
-     * Wasserhöhe
+     * Water level
      * --------------------------------------------------------
      */
     payload += "\"water_level\":{";
@@ -535,7 +520,7 @@ payload += "\",";
 
     /*
      * --------------------------------------------------------
-     * Abstand zur Wasseroberfläche
+     * Distance to the water surface
      * --------------------------------------------------------
      */
     payload += "\"distance\":{";
@@ -567,7 +552,7 @@ payload += "\",";
 
     /*
      * --------------------------------------------------------
-     * Batteriespannung
+     * Battery voltage
      * --------------------------------------------------------
      */
     payload += "\"battery_voltage\":{";
@@ -599,7 +584,7 @@ payload += "\",";
 
     /*
      * --------------------------------------------------------
-     * Batteriestand
+     * Battery level
      * --------------------------------------------------------
      */
     payload += "\"battery_percent\":{";
@@ -636,16 +621,15 @@ payload += "\",";
 
 
     /*
-     * Gesamtes JSON
+     * Complete JSON document
      */
     payload += "}";
 
 
     /*
-     * Discovery retained veröffentlichen.
+     * Retain the discovery payload.
      *
-     * Dadurch bleibt die Gerätekonfiguration
-     * im Broker gespeichert.
+     * This keeps the device configuration available in the broker.
      */
     const bool result =
         mqttClient.publish(
@@ -708,7 +692,7 @@ void MqttManager::recordDiscoveryResult(
 
 /*
  * ============================================================
- * Messwerte
+     * Measurements
  * ============================================================
  */
 
@@ -783,10 +767,10 @@ bool MqttManager::publishMeasurement()
 
 
     /*
-     * Nicht retained:
+     * Do not retain state messages:
      *
-     * Home Assistant speichert den letzten Zustand selbst.
-     * expire_after erkennt ausgefallene Messzyklen.
+     * Home Assistant stores the latest state, while expire_after detects
+     * missed measurement cycles.
      */
     const bool result =
         mqttClient.publish(
@@ -956,7 +940,7 @@ void MqttManager::callback(
 
 /*
  * ============================================================
- * IDs und Topics
+ * IDs and topics
  * ============================================================
  */
 

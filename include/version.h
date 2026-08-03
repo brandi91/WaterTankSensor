@@ -2,16 +2,12 @@
 
 /*
  * ============================================================
- * WaterTankSensor – Firmware-Version
+ * WaterTankSensor - firmware version
  * ============================================================
  *
- * Die Versionsinformationen befinden sich bewusst in einer
- * eigenen Datei. Dadurch können sie überall im Projekt über
- *
- * #include "version.h"
- *
- * verwendet werden.
+ * Version information lives in one dedicated file. Include this header in any
+ * module that needs the version instead of duplicating the value.
  */
 
 #define FW_NAME "WaterTankSensor"
-#define FW_VERSION "0.10.0"
+#define FW_VERSION "0.11.0"

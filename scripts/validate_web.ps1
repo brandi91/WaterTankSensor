@@ -22,6 +22,16 @@ foreach ($match in [regex]::Matches(
 foreach ($file in $htmlFiles) {
     $content = Get-Content -Raw -LiteralPath $file.FullName
 
+    if ($content -notmatch '(?i)<html\s+lang="en"') {
+        Add-ValidationError "$($file.Name): document language must be English"
+    }
+
+    $germanTextPattern =
+        '(?i)\b(?:einstellungen|messung|batterie|füllstand|wasserstand|hochladen|neustart|angesteckt|sekunden|minuten|stunden)\b'
+    if ($content -match $germanTextPattern) {
+        Add-ValidationError "$($file.Name): German user-facing text detected"
+    }
+
     $ids = @{}
     foreach ($match in [regex]::Matches($content, '\bid\s*=\s*"([^"]+)"')) {
         $id = $match.Groups[1].Value
@@ -80,6 +90,7 @@ foreach ($file in $htmlFiles) {
             !$asset.StartsWith("//") -and
             $asset -notmatch '^/(?:login|info|logs)?$' -and
             $asset -notmatch '^/api/' -and
+            !$routes.ContainsKey("HTTP_GET $asset") -and
             !(Test-Path -LiteralPath (Join-Path $dataDir $asset.TrimStart("/")))
         ) {
             Add-ValidationError "$($file.Name): missing local asset '$asset'"

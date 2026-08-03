@@ -64,10 +64,10 @@ behavior is distinct from the statically verified preparation guards.
 | Custom FreeRTOS task/timer | none created by project code | framework tasks are not manually deleted |
 | Project interrupt handler | none registered | ext0 is wake hardware, not an awake callback |
 
-The current sensor implementation is simulated; its trigger pin is nevertheless
-initialized low and explicitly returned low before sleep. Status and RGB outputs
-are turned off. GPIO hold is not enabled because the current wiring does not
-demonstrate a need for it. Fixed GPIO 33 and its active-low wake level are
+The JSN-SR04T driver performs a bounded pulse/echo measurement. Its trigger pin
+is initialized low and explicitly returned low before sleep. Status and RGB
+outputs are turned off. GPIO hold is not enabled because the current wiring does
+not demonstrate a need for it. Fixed GPIO 33 and its active-low wake level are
 unchanged.
 
 ## Automated logic coverage
